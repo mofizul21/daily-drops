@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
+import 'package:daily_drop/includes/Common_Styles.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -46,35 +47,28 @@ class _LoginPageState extends State<LoginPage> {
                   const SizedBox(height: 24),
                   ElevatedButton(
                     onPressed: () {},
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: Colors.black,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
+                    style: CommonStyles.primaryButtonStyle,
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.g_mobiledata, color: Colors.black),
+                        Icon(
+                          Icons.g_mobiledata_outlined,
+                          color: Colors.black,
+                          size: 30.0,
+                        ),
                         const SizedBox(width: 8),
                         Text('Login with Google'),
                       ],
                     ),
                   ),
+                  const SizedBox(height: 10),
                   ElevatedButton(
                     onPressed: () {},
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: Colors.black,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
+                    style: CommonStyles.primaryButtonStyle,
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.email, color: Colors.black),
+                        Icon(Icons.email, color: Colors.black, size: 24.0),
                         const SizedBox(width: 8),
                         Text('Login with Email'),
                       ],
