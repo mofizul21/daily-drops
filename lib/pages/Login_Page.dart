@@ -16,17 +16,19 @@ class _LoginPageState extends State<LoginPage> {
       body: Stack(
         children: [
           Positioned.fill(
-            child: Lottie.asset(
-              'assets/lotties/login_page_bg.json',
-              fit: BoxFit.cover,
-              repeat: true,
-              reverse: true,
+            child: Container(
+              child: Lottie.asset(
+                'assets/lotties/login_page_bg.json',
+                fit: BoxFit.cover,
+                repeat: true,
+                reverse: true,
+              ),
             ),
           ),
 
           Center(
             child: Padding(
-              padding: const EdgeInsets.all(30.0),
+              padding: const EdgeInsets.all(60.0),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -42,7 +44,8 @@ class _LoginPageState extends State<LoginPage> {
                   const SizedBox(height: 10),
                   Text(
                     'Share your daily thoughts & moments',
-                    style: TextStyle(fontSize: 16),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 24),
                   ElevatedButton(
@@ -54,14 +57,13 @@ class _LoginPageState extends State<LoginPage> {
                         Icon(
                           Icons.g_mobiledata_outlined,
                           color: Colors.black,
-                          size: 30.0,
+                          size: 35.0,
                         ),
                         const SizedBox(width: 8),
                         Text('Login with Google'),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 10),
                   ElevatedButton(
                     onPressed: () {},
                     style: CommonStyles.primaryButtonStyle,
