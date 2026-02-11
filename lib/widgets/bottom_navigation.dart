@@ -22,10 +22,10 @@ class BottomNavigation extends StatelessWidget {
             ),
             BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
           ],
-          onTap: (value) {
-            selectedPageNotifier.value = value;
+          onTap: (index) {
+            selectedPageNotifier.value = index + 1; // Adjust index for pageList
           },
-          currentIndex: value,
+          currentIndex: value - 1, // Adjust index for BottomNavigationBar items
         );
       },
     );

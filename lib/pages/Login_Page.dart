@@ -51,12 +51,7 @@ class _LoginPageState extends State<LoginPage> {
                   const SizedBox(height: 24),
                   ElevatedButton(
                     onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const HomePage(),
-                        ),
-                      );
+                      selectedPageNotifier.value = 1;
                     },
                     style: CommonStyles.primaryButtonStyle,
                     child: Row(

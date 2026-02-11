@@ -22,15 +22,16 @@ class _WidgetTreeState extends State<WidgetTree> {
   ];
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(appname)),
-      body: ValueListenableBuilder(
-        valueListenable: selectedPageNotifier,
-        builder: (context, value, child) {
-          return pageList[value];
-        },
-      ),
-      bottomNavigationBar: BottomNavigation(),
+    return ValueListenableBuilder(
+      valueListenable: selectedPageNotifier,
+      builder: (context, value, child) {
+        bool isLoginPage = (value == 0);
+
+        return Scaffold(
+          body: pageList[value],
+          bottomNavigationBar: isLoginPage ? null : BottomNavigation(),
+        );
+      },
     );
   }
 }
