@@ -1,10 +1,63 @@
 import 'package:flutter/material.dart';
 import '../models/drop.dart';
 
-class DropCard extends StatelessWidget {
+class DropCard extends StatefulWidget { // Changed to StatefulWidget
   final Drop drop;
 
   const DropCard({Key? key, required this.drop}) : super(key: key);
+
+  @override
+  State<DropCard> createState() => _DropCardState();
+}
+
+class _DropCardState extends State<DropCard> with TickerProviderStateMixin { // Added TickerProviderStateMixin
+  late AnimationController _loveAnimationController;
+  late Animation<double> _loveAnimation;
+
+  late AnimationController _ashLoveAnimationController;
+  late Animation<double> _ashLoveAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _loveAnimationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 100), // Shorter duration for quick pop
+      reverseDuration: const Duration(milliseconds: 400), // Longer duration to return
+    );
+    _loveAnimation = Tween<double>(begin: 1.0, end: 1.2).animate(
+      CurvedAnimation(parent: _loveAnimationController, curve: Curves.easeOut),
+    );
+
+    _ashLoveAnimationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 100),
+      reverseDuration: const Duration(milliseconds: 400),
+    );
+    _ashLoveAnimation = Tween<double>(begin: 1.0, end: 1.2).animate(
+      CurvedAnimation(parent: _ashLoveAnimationController, curve: Curves.easeOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _loveAnimationController.dispose();
+    _ashLoveAnimationController.dispose();
+    super.dispose();
+  }
+
+  void _playLoveAnimation() {
+    _loveAnimationController.forward().then((_) {
+      _loveAnimationController.reverse();
+    });
+  }
+
+  void _playAshLoveAnimation() {
+    _ashLoveAnimationController.forward().then((_) {
+      _ashLoveAnimationController.reverse();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -31,7 +84,7 @@ class DropCard extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: 30,
-                backgroundImage: NetworkImage(drop.userIconUrl),
+                backgroundImage: NetworkImage(widget.drop.userIconUrl), // Use widget.drop
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -39,7 +92,7 @@ class DropCard extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      drop.userName,
+                      widget.drop.userName, // Use widget.drop
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
@@ -47,7 +100,7 @@ class DropCard extends StatelessWidget {
                     ),
                     PopupMenuButton<String>(
                       onSelected: (value) {
-                        print('Selected: $value for ${drop.userName}');
+                        print('Selected: $value for ${widget.drop.userName}'); // Use widget.drop
                       },
                       itemBuilder: (BuildContext context) =>
                           <PopupMenuEntry<String>>[
@@ -76,18 +129,62 @@ class DropCard extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           // Drop Text
-          Text(drop.dropText, style: const TextStyle(fontSize: 14)),
+          Text(widget.drop.dropText, style: const TextStyle(fontSize: 16)), // Use widget.drop
           const SizedBox(height: 10),
           // Love Emojis
           Row(
             children: [
-              const Text('❤️'),
-              const SizedBox(width: 4),
-              Text('${drop.loveCount}'),
+              InkWell(
+                onTap: () {
+                  _playLoveAnimation();
+                  print(
+                    'Red heart tapped for ${widget.drop.userName}. Current count: ${widget.drop.loveCount}',
+                  );
+                },
+                child: AnimatedBuilder( // Wrap with AnimatedBuilder
+                  animation: _loveAnimation,
+                  builder: (context, child) {
+                    return Transform.scale(
+                      scale: _loveAnimation.value,
+                      child: child,
+                    );
+                  },
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text('❤️'),
+                      const SizedBox(width: 4),
+                      Text('${widget.drop.loveCount}'), // Use widget.drop
+                    ],
+                  ),
+                ),
+              ),
               const SizedBox(width: 16),
-              const Text('🩶'),
-              const SizedBox(width: 4),
-              Text('${drop.ashLoveCount}'),
+              InkWell(
+                onTap: () {
+                  _playAshLoveAnimation();
+                  print(
+                    'Ash heart tapped for ${widget.drop.userName}. Current count: ${widget.drop.ashLoveCount}',
+                  );
+                },
+                child: AnimatedBuilder( // Wrap with AnimatedBuilder
+                  animation: _ashLoveAnimation,
+                  builder: (context, child) {
+                    return Transform.scale(
+                      scale: _ashLoveAnimation.value,
+                      child: child,
+                    );
+                  },
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text('🩶'),
+                      const SizedBox(width: 4),
+                      Text('${widget.drop.ashLoveCount}'), // Use widget.drop
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
         ],

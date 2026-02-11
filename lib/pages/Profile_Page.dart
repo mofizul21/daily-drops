@@ -1,7 +1,13 @@
 import 'package:daily_drop/includes/constants.dart';
+import 'package:daily_drop/pages/delete_account.dart';
 import 'package:daily_drop/pages/login_page.dart';
+import 'package:daily_drop/pages/update_email.dart';
+import 'package:daily_drop/pages/update_password.dart';
+import 'package:daily_drop/pages/update_password.dart';
+import 'package:daily_drop/pages/delete_account.dart';
 import 'package:daily_drop/widget_tree.dart';
 import 'package:daily_drop/widgets/bottom_navigation.dart';
+import 'package:daily_drop/widgets/post_box.dart';
 import 'package:flutter/material.dart';
 import '../models/drop.dart';
 import '../widgets/drop_card.dart';
@@ -71,13 +77,11 @@ class _ProfilePageState extends State<ProfilePage> {
         centerTitle: true,
         actions: [
           Builder(
-            // Add Builder here
             builder: (BuildContext innerContext) {
-              // Use innerContext
               return IconButton(
                 icon: const Icon(Icons.settings),
                 onPressed: () {
-                  Scaffold.of(innerContext).openEndDrawer(); // Use innerContext
+                  Scaffold.of(innerContext).openEndDrawer();
                 },
               );
             },
@@ -85,7 +89,6 @@ class _ProfilePageState extends State<ProfilePage> {
         ],
       ),
       endDrawer: Drawer(
-        // Added endDrawer here
         child: ListView(
           padding: EdgeInsets.zero,
           children: <Widget>[
@@ -103,27 +106,36 @@ class _ProfilePageState extends State<ProfilePage> {
               leading: const Icon(Icons.email),
               title: const Text('Update Email'),
               onTap: () {
-                Navigator.pop(context); // Close the drawer
-                print('Update Email tapped');
-                // Navigate to Update Email screen
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const UpdateEmailPage(),
+                  ),
+                );
               },
             ),
             ListTile(
               leading: const Icon(Icons.lock),
               title: const Text('Update Password'),
               onTap: () {
-                Navigator.pop(context); // Close the drawer
-                print('Update Password tapped');
-                // Navigate to Update Password screen
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const UpdatePasswordPage(),
+                  ),
+                );
               },
             ),
             ListTile(
               leading: const Icon(Icons.delete),
               title: const Text('Delete Account'),
               onTap: () {
-                Navigator.pop(context); // Close the drawer
-                print('Delete Account tapped');
-                // Show confirmation dialog for deleting account
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const DeleteAccountPage(),
+                  ),
+                );
               },
             ),
             const Divider(), // Add a divider for separation
@@ -192,7 +204,11 @@ class _ProfilePageState extends State<ProfilePage> {
                           ),
                           child: const Text(
                             'Streak:',
-                            style: TextStyle(color: Colors.black, fontSize: 16),
+                            style: TextStyle(
+                              color: Colors.black,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                         Container(
@@ -219,11 +235,21 @@ class _ProfilePageState extends State<ProfilePage> {
               ],
             ),
           ),
+
           Expanded(
             child: ListView.builder(
-              itemCount: _sampleDrops.length,
+              itemCount: _sampleDrops.length + 1,
               itemBuilder: (context, index) {
-                final drop = _sampleDrops[index];
+                if (index == 0) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 16.0,
+                      vertical: 16.0,
+                    ),
+                    child: PostBox(),
+                  );
+                }
+                final drop = _sampleDrops[index - 1];
                 return Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
                   child: DropCard(drop: drop),

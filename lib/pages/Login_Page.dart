@@ -2,6 +2,7 @@ import 'package:daily_drop/pages/home_page.dart';
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 import 'package:daily_drop/includes/constants.dart';
+import 'package:daily_drop/pages/email_login.dart'; // Import EmailLoginPage
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -68,7 +69,12 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                   ),
                   ElevatedButton(
-                    onPressed: () {},
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const EmailLoginPage()),
+                      );
+                    },
                     style: CommonStyles.primaryButtonStyle,
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
