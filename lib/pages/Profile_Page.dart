@@ -1,3 +1,6 @@
+import 'package:daily_drop/includes/constants.dart';
+import 'package:daily_drop/pages/login_page.dart';
+import 'package:daily_drop/widget_tree.dart';
 import 'package:daily_drop/widgets/bottom_navigation.dart';
 import 'package:flutter/material.dart';
 import '../models/drop.dart';
@@ -67,8 +70,78 @@ class _ProfilePageState extends State<ProfilePage> {
         foregroundColor: Colors.white,
         centerTitle: true,
         actions: [
-          IconButton(icon: const Icon(Icons.settings), onPressed: () {}),
+          Builder(
+            // Add Builder here
+            builder: (BuildContext innerContext) {
+              // Use innerContext
+              return IconButton(
+                icon: const Icon(Icons.settings),
+                onPressed: () {
+                  Scaffold.of(innerContext).openEndDrawer(); // Use innerContext
+                },
+              );
+            },
+          ),
         ],
+      ),
+      endDrawer: Drawer(
+        // Added endDrawer here
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: <Widget>[
+            UserAccountsDrawerHeader(
+              accountName: const Text("John Doe"),
+              accountEmail: const Text("john.doe@example.com"),
+              currentAccountPicture: const CircleAvatar(
+                backgroundImage: NetworkImage(
+                  "https://images.unsplash.com/photo-1506794778202-cad84cf45f1a?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=870&q=80",
+                ),
+              ),
+              decoration: BoxDecoration(color: Colors.blue.shade900),
+            ),
+            ListTile(
+              leading: const Icon(Icons.email),
+              title: const Text('Update Email'),
+              onTap: () {
+                Navigator.pop(context); // Close the drawer
+                print('Update Email tapped');
+                // Navigate to Update Email screen
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.lock),
+              title: const Text('Update Password'),
+              onTap: () {
+                Navigator.pop(context); // Close the drawer
+                print('Update Password tapped');
+                // Navigate to Update Password screen
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete),
+              title: const Text('Delete Account'),
+              onTap: () {
+                Navigator.pop(context); // Close the drawer
+                print('Delete Account tapped');
+                // Show confirmation dialog for deleting account
+              },
+            ),
+            const Divider(), // Add a divider for separation
+            ListTile(
+              leading: const Icon(Icons.logout),
+              title: const Text('Logout'),
+              onTap: () {
+                Navigator.pop(context);
+                selectedPageNotifier.value = 0;
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (context) => const WidgetTree()),
+                  (route) => false,
+                );
+              },
+            ),
+          ],
+        ),
       ),
       body: Column(
         children: [
