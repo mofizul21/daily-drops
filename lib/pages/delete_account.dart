@@ -22,33 +22,33 @@ class _DeleteAccountPageState extends State<DeleteAccountPage> {
 
   void _deleteAccount() {
     if (_formKey.currentState!.validate() && _confirmDeletion) {
-      // Here you would typically call an authentication service
-      // to delete the user's account.
-      // For now, just print the password.
       print('Password for deletion: ${_passwordController.text}');
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Deleting account... (simulated)')),
       );
 
-      // Simulate a network call for account deletion
       Future.delayed(const Duration(seconds: 2), () {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Account deleted successfully!')),
           );
-          // After deletion, navigate to a logged-out state, e.g., LoginPage
-          selectedPageNotifier.value = 0; // Ensure WidgetTree shows LoginPage
+
+          selectedPageNotifier.value = 0;
           Navigator.pushAndRemoveUntil(
             context,
-            MaterialPageRoute(builder: (context) => const WidgetTree()), // Navigate to WidgetTree
-            (route) => false, // Remove all previous routes
+            MaterialPageRoute(builder: (context) => const WidgetTree()),
+            (route) => false,
           );
         }
       });
     } else if (!_confirmDeletion) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please confirm you understand the deletion consequences.')),
+        const SnackBar(
+          content: Text(
+            'Please confirm you understand the deletion consequences.',
+          ),
+        ),
       );
     }
   }
