@@ -177,7 +177,6 @@ class _HomePageState extends State<HomePage> {
               .toList(),
         ],
       ),
-      bottomNavigationBar: BottomNavigation(),
     );
   }
 }

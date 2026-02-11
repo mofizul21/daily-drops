@@ -88,7 +88,6 @@ class _TrendingPageState extends State<TrendingPage> {
               .toList(),
         ],
       ),
-      bottomNavigationBar: BottomNavigation(),
     );
   }
 }

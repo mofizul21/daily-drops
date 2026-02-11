@@ -1,7 +1,7 @@
-import 'package:daily_drop/pages/Home_Page.dart';
+import 'package:daily_drop/pages/home_page.dart';
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
-import 'package:daily_drop/includes/Common_Styles.dart';
+import 'package:daily_drop/includes/constants.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
