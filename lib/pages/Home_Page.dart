@@ -63,7 +63,7 @@ class _HomePageState extends State<HomePage> {
           "Today's Drop",
           style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
         ),
-        backgroundColor: Colors.blue,
+        backgroundColor: Colors.blue.shade900,
         foregroundColor: Colors.white,
         centerTitle: true,
       ),

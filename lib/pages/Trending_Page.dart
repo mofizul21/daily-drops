@@ -63,7 +63,7 @@ class _TrendingPageState extends State<TrendingPage> {
           "Trending Today",
           style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
         ),
-        backgroundColor: Colors.blue,
+        backgroundColor: Colors.blue.shade900,
         foregroundColor: Colors.white,
         centerTitle: true,
       ),
