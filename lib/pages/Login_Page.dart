@@ -1,3 +1,4 @@
+import 'package:daily_drop/pages/Home_Page.dart';
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 import 'package:daily_drop/includes/Common_Styles.dart';
@@ -49,7 +50,14 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   const SizedBox(height: 24),
                   ElevatedButton(
-                    onPressed: () {},
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const HomePage(),
+                        ),
+                      );
+                    },
                     style: CommonStyles.primaryButtonStyle,
                     child: Row(
                       mainAxisSize: MainAxisSize.min,

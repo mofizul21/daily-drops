@@ -1,4 +1,7 @@
 import 'package:daily_drop/pages/Home_Page.dart';
+import 'package:daily_drop/pages/Login_Page.dart';
+import 'package:daily_drop/pages/Profile_Page.dart';
+import 'package:daily_drop/pages/Trending_Page.dart';
 import 'package:flutter/material.dart';
 
 void main() {
@@ -15,7 +18,7 @@ class MyApp extends StatelessWidget {
       title: 'Flutter Demo',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(colorScheme: .fromSeed(seedColor: Colors.deepPurple)),
-      home: HomePage(),
+      home: ProfilePage(),
     );
   }
 }
