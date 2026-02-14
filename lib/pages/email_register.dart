@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 import 'package:daily_drop/includes/constants.dart';
+import 'package:daily_drop/auth/auth_service.dart'; // Import auth_service.dart
+import 'package:firebase_auth/firebase_auth.dart'; // Import firebase_auth
 
 class EmailRegisterPage extends StatefulWidget {
   const EmailRegisterPage({super.key});
@@ -16,6 +18,8 @@ class _EmailRegisterPageState extends State<EmailRegisterPage> {
   final TextEditingController _confirmPasswordController =
       TextEditingController();
 
+  final AuthService _authService = authService.value; // Get authService instance
+
   @override
   void dispose() {
     _nameController.dispose();
@@ -23,6 +27,62 @@ class _EmailRegisterPageState extends State<EmailRegisterPage> {
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
+  }
+
+  void _showSnackBar(String message, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Colors.red : Colors.green,
+      ),
+    );
+  }
+
+  Future<void> _register() async {
+    if (_nameController.text.isEmpty ||
+        _emailController.text.isEmpty ||
+        _passwordController.text.isEmpty ||
+        _confirmPasswordController.text.isEmpty) {
+      _showSnackBar('Please fill all fields', isError: true);
+      return;
+    }
+
+    if (_passwordController.text != _confirmPasswordController.text) {
+      _showSnackBar('Passwords do not match', isError: true);
+      return;
+    }
+
+    try {
+      String signUpResult = await _authService.signUpWithEmailPassword(
+        _emailController.text,
+        _passwordController.text,
+      );
+
+      if (signUpResult == 'success') {
+        // Update user profile with name
+        String updateProfileResult = await _authService.updateProfile(
+          _nameController.text,
+          '', // No photo URL for now
+        );
+
+        if (updateProfileResult == 'success') {
+          _showSnackBar('Registration successful!');
+          // Navigate to AuthWrapper to handle routing based on auth state
+          Navigator.of(context).pop(); // Go back to the login page
+        } else {
+          _showSnackBar(
+              'Registration successful, but failed to update profile: $updateProfileResult',
+              isError: true);
+           Navigator.of(context).pop(); // Still go back to login, even if profile update failed
+        }
+      } else {
+        _showSnackBar('Registration failed: $signUpResult', isError: true);
+      }
+    } on FirebaseAuthException catch (e) {
+      _showSnackBar('Firebase error: ${e.message}', isError: true);
+    } catch (e) {
+      _showSnackBar('An unexpected error occurred: $e', isError: true);
+    }
   }
 
   @override
@@ -173,13 +233,7 @@ class _EmailRegisterPageState extends State<EmailRegisterPage> {
                   ),
                   const SizedBox(height: 30),
                   ElevatedButton(
-                    onPressed: () {
-                      print('Register Email: ${_emailController.text}');
-                      print('Register Password: ${_passwordController.text}');
-                      print(
-                        'Confirm Password: ${_confirmPasswordController.text}',
-                      );
-                    },
+                    onPressed: _register, // Call the _register method
                     style: CommonStyles.primaryButtonStyle.copyWith(
                       foregroundColor: MaterialStateProperty.all<Color>(
                         Colors.blueAccent,

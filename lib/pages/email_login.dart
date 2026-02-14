@@ -3,6 +3,8 @@ import 'package:lottie/lottie.dart';
 import 'package:daily_drop/includes/constants.dart'; // Import CommonStyles
 import 'package:daily_drop/pages/forgot_password.dart'; // Import ForgotPasswordPage
 import 'package:daily_drop/pages/email_register.dart'; // Import EmailRegisterPage
+import 'package:daily_drop/auth/auth_service.dart'; // Import auth_service.dart
+import 'package:daily_drop/widget_tree.dart'; // Import widget_tree.dart for selectedPageNotifier
 
 class EmailLoginPage extends StatefulWidget {
   const EmailLoginPage({super.key});
@@ -15,11 +17,43 @@ class _EmailLoginPageState extends State<EmailLoginPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
+  final AuthService _authService = authService.value; // Get authService instance
+
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  void _showSnackBar(String message, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Colors.red : Colors.green,
+      ),
+    );
+  }
+
+  Future<void> _login() async {
+    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
+      _showSnackBar('Please fill all fields', isError: true);
+      return;
+    }
+
+    String signInResult = await _authService.signInWithEmailPassword(
+      _emailController.text,
+      _passwordController.text,
+    );
+
+    if (signInResult == 'success') {
+      _showSnackBar('Login successful!');
+      selectedPageNotifier.value = 1; // Set to HomePage index
+      // Navigate back after successful login. AuthWrapper will handle the main routing.
+      Navigator.of(context).pop();
+    } else {
+      _showSnackBar('Login failed: $signInResult', isError: true);
+    }
   }
 
   @override
@@ -116,11 +150,7 @@ class _EmailLoginPageState extends State<EmailLoginPage> {
                   ),
                   const SizedBox(height: 30),
                   ElevatedButton(
-                    onPressed: () {
-                      // TODO: Implement email login logic
-                      print('Email: ${_emailController.text}');
-                      print('Password: ${_passwordController.text}');
-                    },
+                    onPressed: _login, // Call the _login method
                     style: CommonStyles.primaryButtonStyle.copyWith(
                       // Override primaryButtonStyle for this button
                       foregroundColor: MaterialStateProperty.all<Color>(

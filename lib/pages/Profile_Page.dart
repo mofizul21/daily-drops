@@ -11,6 +11,7 @@ import 'package:daily_drop/widgets/post_box.dart';
 import 'package:flutter/material.dart';
 import '../models/drop.dart';
 import '../widgets/drop_card.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // Import FirebaseAuth
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -20,6 +21,14 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
+  final FirebaseAuth _auth = FirebaseAuth.instance; // Instance of FirebaseAuth
+  User? _currentUser; // Current logged-in user
+
+  @override
+  void initState() {
+    super.initState();
+    _currentUser = _auth.currentUser; // Get current user when the state initializes
+  }
   final List<Drop> _sampleDrops = [
     Drop(
       userName: 'John Doe',
@@ -93,12 +102,13 @@ class _ProfilePageState extends State<ProfilePage> {
           padding: EdgeInsets.zero,
           children: <Widget>[
             UserAccountsDrawerHeader(
-              accountName: const Text("John Doe"),
-              accountEmail: const Text("john.doe@example.com"),
-              currentAccountPicture: const CircleAvatar(
-                backgroundImage: NetworkImage(
-                  "https://images.unsplash.com/photo-1506794778202-cad84cf45f1a?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=870&q=80",
-                ),
+              accountName: Text(_currentUser?.displayName ?? "User Name"),
+              accountEmail: Text(_currentUser?.email ?? "user@example.com"),
+              currentAccountPicture: CircleAvatar(
+                backgroundImage: _currentUser?.photoURL != null
+                    ? NetworkImage(_currentUser!.photoURL!)
+                    : const AssetImage('assets/images/user_icon.png')
+                        as ImageProvider, // Default user icon
               ),
               decoration: BoxDecoration(color: Colors.blue.shade900),
             ),
@@ -142,14 +152,33 @@ class _ProfilePageState extends State<ProfilePage> {
             ListTile(
               leading: const Icon(Icons.logout),
               title: const Text('Logout'),
-              onTap: () {
+              onTap: () async {
+                // Close the drawer
                 Navigator.pop(context);
-                selectedPageNotifier.value = 0;
-                Navigator.pushAndRemoveUntil(
-                  context,
-                  MaterialPageRoute(builder: (context) => const WidgetTree()),
-                  (route) => false,
-                );
+                String signOutResult = await authService.value.signOut();
+                if (signOutResult == 'success') {
+                  // Reset selectedPageNotifier to 0 (LoginPage)
+                  selectedPageNotifier.value = 0;
+                  // Navigate to AuthWrapper, which will then show LoginPage
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(builder: (context) => const AuthWrapper()),
+                    (route) => false,
+                  );
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Logged out successfully!'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Logout failed: $signOutResult'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
               },
             ),
           ],
@@ -168,19 +197,20 @@ class _ProfilePageState extends State<ProfilePage> {
               crossAxisAlignment: CrossAxisAlignment.center,
               mainAxisAlignment: MainAxisAlignment.start,
               children: [
-                const CircleAvatar(
+                CircleAvatar(
                   radius: 40,
-                  backgroundImage: NetworkImage(
-                    "https://images.unsplash.com/photo-1506794778202-cad84cf45f1a?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=870&q=80",
-                  ),
+                  backgroundImage: _currentUser?.photoURL != null
+                      ? NetworkImage(_currentUser!.photoURL!)
+                      : const AssetImage('assets/images/user_icon.png')
+                          as ImageProvider, // Default user icon
                 ),
                 const SizedBox(width: 16),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      "John Doe",
-                      style: TextStyle(
+                    Text(
+                      _currentUser?.displayName ?? "User Name",
+                      style: const TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
