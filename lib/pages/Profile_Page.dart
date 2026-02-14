@@ -1,17 +1,18 @@
+import 'package:daily_drop/auth/auth_wrapper.dart';
 import 'package:daily_drop/includes/constants.dart';
 import 'package:daily_drop/pages/delete_account.dart';
-import 'package:daily_drop/pages/login_page.dart';
+import 'package:daily_drop/pages/edit_profile_page.dart';
 import 'package:daily_drop/pages/update_email.dart';
 import 'package:daily_drop/pages/update_password.dart';
-import 'package:daily_drop/pages/update_password.dart';
-import 'package:daily_drop/pages/delete_account.dart';
-import 'package:daily_drop/widget_tree.dart';
-import 'package:daily_drop/widgets/bottom_navigation.dart';
 import 'package:daily_drop/widgets/post_box.dart';
 import 'package:flutter/material.dart';
 import '../models/drop.dart';
 import '../widgets/drop_card.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // Import FirebaseAuth
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:daily_drop/auth/auth_service.dart';
+import 'package:crypto/crypto.dart';
+import 'dart:convert';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -21,14 +22,36 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  final FirebaseAuth _auth = FirebaseAuth.instance; // Instance of FirebaseAuth
-  User? _currentUser; // Current logged-in user
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  User? _currentUser;
+  String? _userGender;
+  DateTime? _userDateOfBirth;
 
   @override
   void initState() {
     super.initState();
-    _currentUser = _auth.currentUser; // Get current user when the state initializes
+    _currentUser = _auth.currentUser;
+    _loadUserData();
   }
+
+  Future<void> _loadUserData() async {
+    final userData = await authService.value.getUserData();
+    if (userData != null) {
+      setState(() {
+        _userGender = userData['gender'];
+        if (userData['dateOfBirth'] != null) {
+          _userDateOfBirth = (userData['dateOfBirth'] as Timestamp).toDate();
+        }
+      });
+    }
+  }
+
+  String _generateGravatarUrl(String email) {
+    final normalizedEmail = email.trim().toLowerCase();
+    final emailHash = md5.convert(utf8.encode(normalizedEmail)).toString();
+    return 'https://www.gravatar.com/avatar/$emailHash?s=200&d=identicon';
+  }
+
   final List<Drop> _sampleDrops = [
     Drop(
       userName: 'John Doe',
@@ -105,12 +128,31 @@ class _ProfilePageState extends State<ProfilePage> {
               accountName: Text(_currentUser?.displayName ?? "User Name"),
               accountEmail: Text(_currentUser?.email ?? "user@example.com"),
               currentAccountPicture: CircleAvatar(
-                backgroundImage: _currentUser?.photoURL != null
-                    ? NetworkImage(_currentUser!.photoURL!)
+                backgroundImage: _currentUser?.email != null
+                    ? NetworkImage(_generateGravatarUrl(_currentUser!.email!))
                     : const AssetImage('assets/images/user_icon.png')
-                        as ImageProvider, // Default user icon
+                          as ImageProvider,
               ),
               decoration: BoxDecoration(color: Colors.blue.shade900),
+            ),
+            ListTile(
+              leading: const Icon(Icons.edit),
+              title: const Text('Edit Profile'),
+              onTap: () async {
+                Navigator.pop(context);
+                final result = await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const EditProfilePage(),
+                  ),
+                );
+                if (result == true) {
+                  setState(() {
+                    _currentUser = _auth.currentUser;
+                    _loadUserData();
+                  });
+                }
+              },
             ),
             ListTile(
               leading: const Icon(Icons.email),
@@ -148,21 +190,20 @@ class _ProfilePageState extends State<ProfilePage> {
                 );
               },
             ),
-            const Divider(), // Add a divider for separation
+            const Divider(),
             ListTile(
               leading: const Icon(Icons.logout),
               title: const Text('Logout'),
               onTap: () async {
-                // Close the drawer
                 Navigator.pop(context);
                 String signOutResult = await authService.value.signOut();
                 if (signOutResult == 'success') {
-                  // Reset selectedPageNotifier to 0 (LoginPage)
                   selectedPageNotifier.value = 0;
-                  // Navigate to AuthWrapper, which will then show LoginPage
                   Navigator.pushAndRemoveUntil(
                     context,
-                    MaterialPageRoute(builder: (context) => const AuthWrapper()),
+                    MaterialPageRoute(
+                      builder: (context) => const AuthWrapper(),
+                    ),
                     (route) => false,
                   );
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -199,10 +240,10 @@ class _ProfilePageState extends State<ProfilePage> {
               children: [
                 CircleAvatar(
                   radius: 40,
-                  backgroundImage: _currentUser?.photoURL != null
-                      ? NetworkImage(_currentUser!.photoURL!)
+                  backgroundImage: _currentUser?.email != null
+                      ? NetworkImage(_generateGravatarUrl(_currentUser!.email!))
                       : const AssetImage('assets/images/user_icon.png')
-                          as ImageProvider, // Default user icon
+                            as ImageProvider, // Default user icon
                 ),
                 const SizedBox(width: 16),
                 Column(
