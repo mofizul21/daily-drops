@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:daily_drop/auth/auth_service.dart'; // Import AuthService
+import 'package:firebase_auth/firebase_auth.dart'; // Import FirebaseAuth
 
 class UpdatePasswordPage extends StatefulWidget {
   const UpdatePasswordPage({super.key});
@@ -13,6 +15,8 @@ class _UpdatePasswordPageState extends State<UpdatePasswordPage> {
   final TextEditingController _newPasswordController = TextEditingController();
   final TextEditingController _confirmNewPasswordController = TextEditingController();
 
+  final AuthService _authService = authService.value; // Get AuthService instance
+
   @override
   void dispose() {
     _currentPasswordController.dispose();
@@ -21,28 +25,57 @@ class _UpdatePasswordPageState extends State<UpdatePasswordPage> {
     super.dispose();
   }
 
-  void _updatePassword() {
+  void _showSnackBar(String message, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Colors.red : Colors.green,
+      ),
+    );
+  }
+
+  Future<void> _updatePassword() async {
     if (_formKey.currentState!.validate()) {
-      // Here you would typically call an authentication service
-      // to update the user's password.
-      // For now, just print the values.
-      print('Current Password: ${_currentPasswordController.text}');
-      print('New Password: ${_newPasswordController.text}');
-      print('Confirm New Password: ${_confirmNewPasswordController.text}');
+      if (_authService.currentUser == null) {
+        _showSnackBar('No user logged in.', isError: true);
+        return;
+      }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Updating password... (simulated)')),
-      );
+      // First re-authenticate the user with their current password
+      // This is a security measure required by Firebase for sensitive operations like password change
+      try {
+        AuthCredential credential = EmailAuthProvider.credential(
+          email: _authService.currentUser!.email!,
+          password: _currentPasswordController.text,
+        );
+        await _authService.currentUser!.reauthenticateWithCredential(credential);
+      } on FirebaseAuthException catch (e) {
+        _showSnackBar('Re-authentication failed: ${e.message}. Please enter your current password correctly.', isError: true);
+        return;
+      } catch (e) {
+        _showSnackBar('An unexpected error occurred during re-authentication: $e', isError: true);
+        return;
+      }
 
-      // Simulate a network call
-      Future.delayed(const Duration(seconds: 2), () {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Password updated successfully!')),
-          );
-          Navigator.pop(context); // Go back to previous screen (ProfilePage)
+      // If re-authentication is successful, then update the password
+      try {
+        String updateResult = await _authService.updatePassword(
+          _newPasswordController.text,
+        );
+
+        if (updateResult == 'success') {
+          _showSnackBar('Password updated successfully!');
+          if (mounted) {
+            Navigator.pop(context); // Go back to previous screen (ProfilePage)
+          }
+        } else {
+          _showSnackBar('Failed to update password: $updateResult', isError: true);
         }
-      });
+      } on FirebaseAuthException catch (e) {
+        _showSnackBar('Failed to update password: ${e.message}', isError: true);
+      } catch (e) {
+        _showSnackBar('An unexpected error occurred: $e', isError: true);
+      }
     }
   }
 

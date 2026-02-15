@@ -2,7 +2,8 @@ import 'package:daily_drop/pages/home_page.dart';
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 import 'package:daily_drop/includes/constants.dart';
-import 'package:daily_drop/pages/email_login.dart'; // Import EmailLoginPage
+import 'package:daily_drop/pages/email_login.dart';
+import 'package:daily_drop/auth/auth_service.dart'; // Import AuthService
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -51,8 +52,22 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   const SizedBox(height: 24),
                   ElevatedButton(
-                    onPressed: () {
-                      selectedPageNotifier.value = 1;
+                    onPressed: () async {
+                      final String result = await authService.value.signInWithGoogle();
+                      if (result == 'success') {
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(builder: (context) => const HomePage()),
+                        );
+                      } else {
+                        String userFriendlyMessage = result;
+                        if (result == 'Google Sign-In aborted by user.') {
+                          userFriendlyMessage = 'Google Sign-In cancelled. Please try again.';
+                        }
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(userFriendlyMessage)),
+                        );
+                      }
                     },
                     style: CommonStyles.primaryButtonStyle,
                     child: Row(
@@ -95,6 +110,6 @@ class _LoginPageState extends State<LoginPage> {
           ),
         ],
       ),
-    );
+      );
   }
 }

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:daily_drop/auth/auth_service.dart'; // Import AuthService
+import 'package:firebase_auth/firebase_auth.dart'; // Import FirebaseAuth
 
-class UpdateEmailPage extends StatefulWidget { // Renamed class
+class UpdateEmailPage extends StatefulWidget {
+  // Renamed class
   const UpdateEmailPage({super.key});
 
   @override
@@ -11,14 +14,17 @@ class _UpdateEmailPageState extends State<UpdateEmailPage> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _currentEmailController = TextEditingController();
   final TextEditingController _newEmailController = TextEditingController();
-  final TextEditingController _confirmNewEmailController = TextEditingController();
+  final TextEditingController _confirmNewEmailController =
+      TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+
+  final AuthService _authService = authService.value; // Get AuthService instance
 
   @override
   void initState() {
     super.initState();
-    // Initialize current email with a placeholder or actual user email
-    _currentEmailController.text = 'john.doe@example.com'; 
+    // Initialize current email with actual user email
+    _currentEmailController.text = _authService.currentUser?.email ?? '';
   }
 
   @override
@@ -30,29 +36,37 @@ class _UpdateEmailPageState extends State<UpdateEmailPage> {
     super.dispose();
   }
 
-  void _updateEmail() {
+  void _showSnackBar(String message, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Colors.red : Colors.green,
+      ),
+    );
+  }
+
+  Future<void> _updateEmail() async {
     if (_formKey.currentState!.validate()) {
-      // Here you would typically call an authentication service
-      // to update the user's email.
-      // For now, just print the values.
-      print('Current Email: ${_currentEmailController.text}');
-      print('New Email: ${_newEmailController.text}');
-      print('Confirm New Email: ${_confirmNewEmailController.text}');
-      print('Password: ${_passwordController.text}');
+      if (_authService.currentUser == null) {
+        _showSnackBar('No user logged in.', isError: true);
+        return;
+      }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Updating email... (simulated)')),
-      );
-
-      // Simulate a network call
-      Future.delayed(const Duration(seconds: 2), () {
+      try {
+        await _authService.updateEmail(
+          newEmail: _newEmailController.text,
+          password: _passwordController.text,
+        );
+        _showSnackBar(
+            'Verification email sent. Please check your inbox to confirm the new email.');
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Email updated successfully!')),
-          );
           Navigator.pop(context); // Go back to previous screen (ProfilePage)
         }
-      });
+      } on FirebaseAuthException catch (e) {
+        _showSnackBar('Failed to update email: ${e.message}', isError: true);
+      } catch (e) {
+        _showSnackBar('An unexpected error occurred: $e', isError: true);
+      }
     }
   }
 

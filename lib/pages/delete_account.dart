@@ -1,5 +1,7 @@
 import 'package:daily_drop/includes/constants.dart';
-import 'package:daily_drop/widget_tree.dart';
+import 'package:daily_drop/auth/auth_service.dart'; // Import AuthService
+import 'package:firebase_auth/firebase_auth.dart'; // Import FirebaseAuth
+import 'package:daily_drop/auth/auth_wrapper.dart'; // Import AuthWrapper for navigation
 import 'package:flutter/material.dart';
 
 class DeleteAccountPage extends StatefulWidget {
@@ -14,41 +16,71 @@ class _DeleteAccountPageState extends State<DeleteAccountPage> {
   final TextEditingController _passwordController = TextEditingController();
   bool _confirmDeletion = false;
 
+  final AuthService _authService = authService.value; // Get AuthService instance
+
   @override
   void dispose() {
     _passwordController.dispose();
     super.dispose();
   }
 
-  void _deleteAccount() {
+  void _showSnackBar(String message, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Colors.red : Colors.green,
+      ),
+    );
+  }
+
+  Future<void> _deleteAccount() async {
     if (_formKey.currentState!.validate() && _confirmDeletion) {
-      print('Password for deletion: ${_passwordController.text}');
+      if (_authService.currentUser == null) {
+        _showSnackBar('No user logged in.', isError: true);
+        return;
+      }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Deleting account... (simulated)')),
-      );
+      // Re-authenticate the user with their current password before deleting the account
+      try {
+        AuthCredential credential = EmailAuthProvider.credential(
+          email: _authService.currentUser!.email!,
+          password: _passwordController.text,
+        );
+        await _authService.currentUser!.reauthenticateWithCredential(credential);
+      } on FirebaseAuthException catch (e) {
+        _showSnackBar('Re-authentication failed: ${e.message}. Please enter your current password correctly.', isError: true);
+        return;
+      } catch (e) {
+        _showSnackBar('An unexpected error occurred during re-authentication: $e', isError: true);
+        return;
+      }
 
-      Future.delayed(const Duration(seconds: 2), () {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Account deleted successfully!')),
-          );
+      // If re-authentication is successful, proceed with account deletion
+      try {
+        String deleteResult = await _authService.deleteAccount();
 
-          selectedPageNotifier.value = 0;
-          Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(builder: (context) => const WidgetTree()),
-            (route) => false,
-          );
+        if (deleteResult == 'success') {
+          _showSnackBar('Account deleted successfully!');
+          if (mounted) {
+            // Clear navigation stack and go to AuthWrapper (which will show LoginPage)
+            Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(builder: (context) => const AuthWrapper()),
+              (route) => false,
+            );
+          }
+        } else {
+          _showSnackBar('Failed to delete account: $deleteResult', isError: true);
         }
-      });
+      } on FirebaseAuthException catch (e) {
+        _showSnackBar('Failed to delete account: ${e.message}', isError: true);
+      } catch (e) {
+        _showSnackBar('An unexpected error occurred: $e', isError: true);
+      }
     } else if (!_confirmDeletion) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Please confirm you understand the deletion consequences.',
-          ),
-        ),
+      _showSnackBar(
+        'Please confirm you understand the deletion consequences.',
+        isError: true,
       );
     }
   }
