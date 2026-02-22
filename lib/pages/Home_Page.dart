@@ -1,4 +1,3 @@
-import 'package:daily_drop/widgets/bottom_navigation.dart';
 import 'package:daily_drop/widgets/post_box.dart';
 import 'package:flutter/material.dart';
 import '../models/drop.dart';

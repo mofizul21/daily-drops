@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
-import 'package:daily_drop/includes/constants.dart'; // Import CommonStyles
-import 'package:daily_drop/pages/forgot_password.dart'; // Import ForgotPasswordPage
-import 'package:daily_drop/pages/email_register.dart'; // Import EmailRegisterPage
-import 'package:daily_drop/auth/auth_service.dart'; // Import auth_service.dart
-import 'package:daily_drop/widget_tree.dart'; // Import widget_tree.dart for selectedPageNotifier
+import 'package:daily_drop/includes/constants.dart';
+import 'package:daily_drop/pages/forgot_password.dart';
+import 'package:daily_drop/pages/email_register.dart';
+import 'package:daily_drop/auth/auth_service.dart';
 
 class EmailLoginPage extends StatefulWidget {
   const EmailLoginPage({super.key});
@@ -17,7 +16,7 @@ class _EmailLoginPageState extends State<EmailLoginPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
-  final AuthService _authService = authService.value; // Get authService instance
+  final AuthService _authService = authService.value;
 
   @override
   void dispose() {

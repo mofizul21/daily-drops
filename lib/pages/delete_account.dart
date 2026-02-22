@@ -1,7 +1,6 @@
-import 'package:daily_drop/includes/constants.dart';
-import 'package:daily_drop/auth/auth_service.dart'; // Import AuthService
-import 'package:firebase_auth/firebase_auth.dart'; // Import FirebaseAuth
-import 'package:daily_drop/auth/auth_wrapper.dart'; // Import AuthWrapper for navigation
+import 'package:daily_drop/auth/auth_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:daily_drop/auth/auth_wrapper.dart';
 import 'package:flutter/material.dart';
 
 class DeleteAccountPage extends StatefulWidget {
