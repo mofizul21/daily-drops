@@ -46,6 +46,17 @@ class _EmailLoginPageState extends State<EmailLoginPage> {
     );
 
     if (signInResult == 'success') {
+      // Check if email is verified
+      if (!_authService.isEmailVerified) {
+        _showSnackBar(
+          'Please verify your email before logging in. Check your inbox.',
+          isError: true,
+        );
+        // Sign out if email is not verified
+        await _authService.signOut();
+        return;
+      }
+
       _showSnackBar('Login successful!');
       selectedPageNotifier.value = 1; // Set to HomePage index
       // Navigate back after successful login. AuthWrapper will handle the main routing.

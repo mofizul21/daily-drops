@@ -21,6 +21,7 @@ class AuthService {
 
   User? get currentUser => firebaseAuth.currentUser;
   Stream<User?> get authStateChanges => firebaseAuth.authStateChanges();
+  bool get isEmailVerified => currentUser?.emailVerified ?? false;
 
   // Method to save additional user data to Firestore
   Future<String> saveUserData(Map<String, dynamic> userData) async {

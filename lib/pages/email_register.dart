@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 import 'package:daily_drop/includes/constants.dart';
-import 'package:daily_drop/auth/auth_service.dart'; // Import auth_service.dart
-import 'package:firebase_auth/firebase_auth.dart'; // Import firebase_auth
+import 'package:daily_drop/auth/auth_service.dart';
+import 'package:daily_drop/pages/email_login.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class EmailRegisterPage extends StatefulWidget {
   const EmailRegisterPage({super.key});
@@ -18,7 +20,8 @@ class _EmailRegisterPageState extends State<EmailRegisterPage> {
   final TextEditingController _confirmPasswordController =
       TextEditingController();
 
-  final AuthService _authService = authService.value; // Get authService instance
+  final AuthService _authService = authService.value;
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -52,6 +55,15 @@ class _EmailRegisterPageState extends State<EmailRegisterPage> {
       return;
     }
 
+    if (_passwordController.text.length < 6) {
+      _showSnackBar('Password must be at least 6 characters', isError: true);
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
     try {
       String signUpResult = await _authService.signUpWithEmailPassword(
         _emailController.text,
@@ -59,21 +71,33 @@ class _EmailRegisterPageState extends State<EmailRegisterPage> {
       );
 
       if (signUpResult == 'success') {
-        // Update user profile with name
-        String updateProfileResult = await _authService.updateProfile(
-          _nameController.text,
-          '', // No photo URL for now
-        );
+        final User? user = _authService.currentUser;
+        if (user != null) {
+          // Save user data to Firestore
+          await _authService.saveUserData({
+            'name': _nameController.text,
+            'email': _emailController.text,
+            'createdAt': FieldValue.serverTimestamp(),
+          });
 
-        if (updateProfileResult == 'success') {
-          _showSnackBar('Registration successful!');
-          // Navigate to AuthWrapper to handle routing based on auth state
-          Navigator.of(context).pop(); // Go back to the login page
-        } else {
+          // Update user profile with name
+          await _authService.updateProfile(_nameController.text, '');
+
+          // Send email verification
+          await user.sendEmailVerification();
+
+          // Sign out the user so they need to verify before logging in
+          await _authService.signOut();
+
           _showSnackBar(
-              'Registration successful, but failed to update profile: $updateProfileResult',
-              isError: true);
-           Navigator.of(context).pop(); // Still go back to login, even if profile update failed
+            'Verification email sent to ${_emailController.text}. Please verify your email before logging in.',
+          );
+
+          // Navigate to login page
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (context) => const EmailLoginPage()),
+            (route) => false,
+          );
         }
       } else {
         _showSnackBar('Registration failed: $signUpResult', isError: true);
@@ -82,6 +106,12 @@ class _EmailRegisterPageState extends State<EmailRegisterPage> {
       _showSnackBar('Firebase error: ${e.message}', isError: true);
     } catch (e) {
       _showSnackBar('An unexpected error occurred: $e', isError: true);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -233,7 +263,7 @@ class _EmailRegisterPageState extends State<EmailRegisterPage> {
                   ),
                   const SizedBox(height: 30),
                   ElevatedButton(
-                    onPressed: _register, // Call the _register method
+                    onPressed: _isLoading ? null : _register,
                     style: CommonStyles.primaryButtonStyle.copyWith(
                       foregroundColor: MaterialStateProperty.all<Color>(
                         Colors.blueAccent,
@@ -242,7 +272,18 @@ class _EmailRegisterPageState extends State<EmailRegisterPage> {
                         Colors.white,
                       ),
                     ),
-                    child: const Text('Register'),
+                    child: _isLoading
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.blueAccent,
+                              ),
+                            ),
+                          )
+                        : const Text('Register'),
                   ),
                 ],
               ),
