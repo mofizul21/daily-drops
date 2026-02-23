@@ -4,6 +4,7 @@ import 'package:daily_drop/includes/constants.dart';
 import 'package:daily_drop/pages/forgot_password.dart';
 import 'package:daily_drop/pages/email_register.dart';
 import 'package:daily_drop/auth/auth_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class EmailLoginPage extends StatefulWidget {
   const EmailLoginPage({super.key});
@@ -17,6 +18,9 @@ class _EmailLoginPageState extends State<EmailLoginPage> {
   final TextEditingController _passwordController = TextEditingController();
 
   final AuthService _authService = authService.value;
+  bool _isLoading = false;
+  bool _obscurePassword = true;
+  bool _showResendVerification = false;
 
   @override
   void dispose() {
@@ -26,12 +30,23 @@ class _EmailLoginPageState extends State<EmailLoginPage> {
   }
 
   void _showSnackBar(String message, {bool isError = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: isError ? Colors.red : Colors.green,
-      ),
+    if (!mounted) return;
+    
+    final snackBar = SnackBar(
+      content: Text(message),
+      backgroundColor: isError ? Colors.red : Colors.green,
+      action: isError && _showResendVerification
+          ? SnackBarAction(
+              label: 'Resend',
+              textColor: Colors.white,
+              onPressed: () {
+                setState(() {}); // Ensure widget is ready
+                _resendVerificationEmail();
+              },
+            )
+          : null,
     );
+    ScaffoldMessenger.of(context).showSnackBar(snackBar);
   }
 
   Future<void> _login() async {
@@ -40,29 +55,95 @@ class _EmailLoginPageState extends State<EmailLoginPage> {
       return;
     }
 
-    String signInResult = await _authService.signInWithEmailPassword(
-      _emailController.text,
-      _passwordController.text,
-    );
+    setState(() {
+      _isLoading = true;
+    });
 
-    if (signInResult == 'success') {
-      // Check if email is verified
-      if (!_authService.isEmailVerified) {
-        _showSnackBar(
-          'Please verify your email before logging in. Check your inbox.',
-          isError: true,
-        );
-        // Sign out if email is not verified
-        await _authService.signOut();
-        return;
+    try {
+      String signInResult = await _authService.signInWithEmailPassword(
+        _emailController.text,
+        _passwordController.text,
+      );
+
+      if (signInResult == 'success') {
+        // Check if email is verified
+        if (!_authService.isEmailVerified) {
+          _showResendVerification = true;
+          _showSnackBar(
+            'Please verify your email before logging in. Check your inbox.',
+            isError: true,
+          );
+          // Sign out if email is not verified
+          await _authService.signOut();
+          return;
+        }
+
+        _showSnackBar('Login successful!');
+        _showResendVerification = false;
+        selectedPageNotifier.value = 1; // Set to HomePage index
+        // Navigate back after successful login. AuthWrapper will handle the main routing.
+        Navigator.of(context).pop();
+      } else {
+        _showSnackBar('Login failed: $signInResult', isError: true);
       }
+    } on FirebaseAuthException catch (e) {
+      _showSnackBar('Login failed: ${e.message}', isError: true);
+    } catch (e) {
+      _showSnackBar('An unexpected error occurred: $e', isError: true);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
 
-      _showSnackBar('Login successful!');
-      selectedPageNotifier.value = 1; // Set to HomePage index
-      // Navigate back after successful login. AuthWrapper will handle the main routing.
-      Navigator.of(context).pop();
-    } else {
-      _showSnackBar('Login failed: $signInResult', isError: true);
+  Future<void> _resendVerificationEmail() async {
+    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
+      _showSnackBar('Please enter your email and password', isError: true);
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      String signInResult = await _authService.signInWithEmailPassword(
+        _emailController.text,
+        _passwordController.text,
+      );
+
+      if (signInResult == 'success') {
+        final User? user = _authService.currentUser;
+        if (user != null && !user.emailVerified) {
+          await user.sendEmailVerification();
+          await _authService.signOut();
+          _showSnackBar('Verification email sent to ${_emailController.text}');
+          setState(() {
+            _showResendVerification = false;
+          });
+        } else if (user?.emailVerified ?? false) {
+          await _authService.signOut();
+          _showSnackBar('Email already verified. Please log in.');
+          setState(() {
+            _showResendVerification = false;
+          });
+        }
+      } else {
+        _showSnackBar('Failed: $signInResult', isError: true);
+      }
+    } on FirebaseAuthException catch (e) {
+      _showSnackBar('Error: ${e.message}', isError: true);
+    } catch (e) {
+      _showSnackBar('An unexpected error occurred: $e', isError: true);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -136,7 +217,7 @@ class _EmailLoginPageState extends State<EmailLoginPage> {
                   const SizedBox(height: 20),
                   TextFormField(
                     controller: _passwordController,
-                    obscureText: true,
+                    obscureText: _obscurePassword,
                     style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(
                       labelText: 'Password',
@@ -156,21 +237,43 @@ class _EmailLoginPageState extends State<EmailLoginPage> {
                         borderSide: const BorderSide(color: Colors.white),
                       ),
                       prefixIcon: const Icon(Icons.lock, color: Colors.white70),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscurePassword
+                              ? Icons.visibility_off
+                              : Icons.visibility,
+                          color: Colors.white70,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _obscurePassword = !_obscurePassword;
+                          });
+                        },
+                      ),
                     ),
                   ),
                   const SizedBox(height: 30),
                   ElevatedButton(
-                    onPressed: _login, // Call the _login method
+                    onPressed: _isLoading ? null : _login,
                     style: CommonStyles.primaryButtonStyle.copyWith(
-                      // Override primaryButtonStyle for this button
                       foregroundColor: MaterialStateProperty.all<Color>(
                         Colors.blueAccent,
-                      ), // Text color for login button
+                      ),
                       backgroundColor: MaterialStateProperty.all<Color>(
                         Colors.white,
-                      ), // Background for login button
+                      ),
                     ),
-                    child: const Text('Login'),
+                    child: _isLoading
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor:
+                                  AlwaysStoppedAnimation<Color>(Colors.blueAccent),
+                            ),
+                          )
+                        : const Text('Login'),
                   ),
                   const SizedBox(height: 20),
                   Row(
