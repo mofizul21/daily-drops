@@ -1,3 +1,6 @@
+import 'package:daily_drop/pages/login_page.dart';
+import 'package:daily_drop/pages/home_page.dart';
+import 'package:daily_drop/widget_tree.dart';
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 import 'package:daily_drop/includes/constants.dart';
@@ -7,7 +10,9 @@ import 'package:daily_drop/auth/auth_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class EmailLoginPage extends StatefulWidget {
-  const EmailLoginPage({super.key});
+  const EmailLoginPage({super.key, this.verificationEmail});
+
+  final String? verificationEmail;
 
   @override
   State<EmailLoginPage> createState() => _EmailLoginPageState();
@@ -23,6 +28,24 @@ class _EmailLoginPageState extends State<EmailLoginPage> {
   bool _showResendVerification = false;
 
   @override
+  void initState() {
+    super.initState();
+    // Show verification message if coming from registration
+    if (widget.verificationEmail != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showSnackBar(
+          'Verification email sent to ${widget.verificationEmail}. '
+          'Please check your inbox before logging in.',
+        );
+        setState(() {
+          _showResendVerification = true;
+          _emailController.text = widget.verificationEmail ?? '';
+        });
+      });
+    }
+  }
+
+  @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
@@ -31,7 +54,7 @@ class _EmailLoginPageState extends State<EmailLoginPage> {
 
   void _showSnackBar(String message, {bool isError = false}) {
     if (!mounted) return;
-    
+
     final snackBar = SnackBar(
       content: Text(message),
       backgroundColor: isError ? Colors.red : Colors.green,
@@ -60,6 +83,9 @@ class _EmailLoginPageState extends State<EmailLoginPage> {
     });
 
     try {
+      // First sign out any existing session
+      await _authService.signOut();
+
       String signInResult = await _authService.signInWithEmailPassword(
         _emailController.text,
         _passwordController.text,
@@ -80,9 +106,19 @@ class _EmailLoginPageState extends State<EmailLoginPage> {
 
         _showSnackBar('Login successful!');
         _showResendVerification = false;
-        selectedPageNotifier.value = 1; // Set to HomePage index
-        // Navigate back after successful login. AuthWrapper will handle the main routing.
-        Navigator.of(context).pop();
+
+        // Set the correct page index for HomePage
+        selectedPageNotifier.value = 1;
+
+        // Wait for snackbar to show, then navigate to WidgetTree (which shows HomePage with bottom nav)
+        await Future.delayed(const Duration(milliseconds: 500));
+        if (mounted) {
+          // Replace entire stack with WidgetTree
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (context) => const WidgetTree()),
+            (route) => false,
+          );
+        }
       } else {
         _showSnackBar('Login failed: $signInResult', isError: true);
       }
@@ -269,8 +305,9 @@ class _EmailLoginPageState extends State<EmailLoginPage> {
                             width: 20,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              valueColor:
-                                  AlwaysStoppedAnimation<Color>(Colors.blueAccent),
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.blueAccent,
+                              ),
                             ),
                           )
                         : const Text('Login'),
@@ -279,6 +316,21 @@ class _EmailLoginPageState extends State<EmailLoginPage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
+                      TextButton(
+                        onPressed: () {
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const LoginPage(),
+                            ),
+                          );
+                        },
+                        child: const Text(
+                          'Back to Login',
+                          style: TextStyle(color: Colors.white70),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
                       TextButton(
                         onPressed: () {
                           Navigator.push(
@@ -293,7 +345,15 @@ class _EmailLoginPageState extends State<EmailLoginPage> {
                           style: TextStyle(color: Colors.white),
                         ),
                       ),
-                      const SizedBox(width: 10),
+                    ],
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text(
+                        "Don't have an account? ",
+                        style: TextStyle(color: Colors.white70),
+                      ),
                       TextButton(
                         onPressed: () {
                           Navigator.push(

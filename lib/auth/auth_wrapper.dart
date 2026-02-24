@@ -4,14 +4,9 @@ import 'package:daily_drop/widget_tree.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-class AuthWrapper extends StatefulWidget {
+class AuthWrapper extends StatelessWidget {
   const AuthWrapper({super.key});
 
-  @override
-  State<AuthWrapper> createState() => _AuthWrapperState();
-}
-
-class _AuthWrapperState extends State<AuthWrapper> {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder(
@@ -20,19 +15,16 @@ class _AuthWrapperState extends State<AuthWrapper> {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
-        
+
         final User? user = snapshot.data;
-        
-        if (user != null) {
-          // Check if email is verified
-          if (!user.emailVerified) {
-            // Sign out unverified users
-            authService.value.signOut();
-            return const LoginPage();
-          }
-          return WidgetTree();
+
+        // Check if user is verified
+        final bool isVerified = user?.emailVerified ?? false;
+
+        if (user != null && isVerified) {
+          return const WidgetTree();
         }
-        
+
         return const LoginPage();
       },
     );

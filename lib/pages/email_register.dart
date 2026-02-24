@@ -67,47 +67,54 @@ class _EmailRegisterPageState extends State<EmailRegisterPage> {
     });
 
     try {
-      String signUpResult = await _authService.signUpWithEmailPassword(
-        _emailController.text,
-        _passwordController.text,
+      // Step 1: Create user account
+      final UserCredential userCredential =
+          await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: _emailController.text,
+        password: _passwordController.text,
       );
 
-      if (signUpResult == 'success') {
-        final User? user = _authService.currentUser;
-        if (user != null) {
-          // Save user data to Firestore
-          await _authService.saveUserData({
-            'name': _nameController.text,
-            'email': _emailController.text,
-            'createdAt': FieldValue.serverTimestamp(),
-          });
-
-          // Update user profile with name
-          await _authService.updateProfile(_nameController.text, '');
-
-          // Send email verification
-          await user.sendEmailVerification();
-
-          // Sign out the user so they need to verify before logging in
-          await _authService.signOut();
-
-          _showSnackBar(
-            'Verification email sent to ${_emailController.text}. Please verify your email before logging in.',
-          );
-
-          // Navigate to login page
-          Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (context) => const EmailLoginPage()),
-            (route) => false,
-          );
-        }
-      } else {
-        _showSnackBar('Registration failed: $signUpResult', isError: true);
+      final User? user = userCredential.user;
+      if (user == null) {
+        throw Exception('Failed to create user account');
       }
+
+      // Step 2: Update user profile with name
+      await user.updateProfile(displayName: _nameController.text);
+
+      // Step 3: Save user data to Firestore (non-blocking)
+      try {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .set({
+          'name': _nameController.text,
+          'email': _emailController.text,
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      } catch (firestoreError) {
+        debugPrint('Firestore save error: $firestoreError');
+      }
+
+      // Step 4: Send email verification
+      await user.sendEmailVerification();
+
+      // Step 5: Navigate to login page
+      if (!mounted) return;
+      
+      // Navigate and pass verification message
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(
+          builder: (context) => EmailLoginPage(
+            verificationEmail: _emailController.text,
+          ),
+        ),
+        (route) => false,
+      );
     } on FirebaseAuthException catch (e) {
       _showSnackBar('Firebase error: ${e.message}', isError: true);
     } catch (e) {
-      _showSnackBar('An unexpected error occurred: $e', isError: true);
+      _showSnackBar('Error: $e', isError: true);
     } finally {
       if (mounted) {
         setState(() {
