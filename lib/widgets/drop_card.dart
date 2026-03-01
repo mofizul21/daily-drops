@@ -1,30 +1,48 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/drop.dart';
+import '../services/drop_service.dart';
+import '../pages/profile_page.dart';
+import 'profile_avatar.dart';
 
-class DropCard extends StatefulWidget { // Changed to StatefulWidget
+class DropCard extends StatefulWidget {
   final Drop drop;
+  final Function(Drop)? onEdit;
 
-  const DropCard({Key? key, required this.drop}) : super(key: key);
+  const DropCard({Key? key, required this.drop, this.onEdit}) : super(key: key);
 
   @override
   State<DropCard> createState() => _DropCardState();
 }
 
-class _DropCardState extends State<DropCard> with TickerProviderStateMixin { // Added TickerProviderStateMixin
+class _DropCardState extends State<DropCard> with TickerProviderStateMixin {
+  final DropService _dropService = DropService();
+  final FirebaseAuth _auth = FirebaseAuth.instance;
   late AnimationController _loveAnimationController;
   late Animation<double> _loveAnimation;
 
   late AnimationController _ashLoveAnimationController;
   late Animation<double> _ashLoveAnimation;
 
+  bool _isOwner = false;
+
+  String? get _userReaction {
+    final currentUserId = _auth.currentUser?.uid;
+    if (currentUserId != null && widget.drop.reactions.containsKey(currentUserId)) {
+      return widget.drop.reactions[currentUserId];
+    }
+    return null;
+  }
+
   @override
   void initState() {
     super.initState();
+    _checkOwnership();
 
     _loveAnimationController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 100), // Shorter duration for quick pop
-      reverseDuration: const Duration(milliseconds: 400), // Longer duration to return
+      duration: const Duration(milliseconds: 100),
+      reverseDuration: const Duration(milliseconds: 400),
     );
     _loveAnimation = Tween<double>(begin: 1.0, end: 1.2).animate(
       CurvedAnimation(parent: _loveAnimationController, curve: Curves.easeOut),
@@ -38,6 +56,13 @@ class _DropCardState extends State<DropCard> with TickerProviderStateMixin { // 
     _ashLoveAnimation = Tween<double>(begin: 1.0, end: 1.2).animate(
       CurvedAnimation(parent: _ashLoveAnimationController, curve: Curves.easeOut),
     );
+  }
+
+  void _checkOwnership() {
+    final currentUserId = _auth.currentUser?.uid;
+    setState(() {
+      _isOwner = currentUserId != null && currentUserId == widget.drop.userId;
+    });
   }
 
   @override
@@ -57,6 +82,101 @@ class _DropCardState extends State<DropCard> with TickerProviderStateMixin { // 
     _ashLoveAnimationController.forward().then((_) {
       _ashLoveAnimationController.reverse();
     });
+  }
+
+  Future<void> _handleLoveTap() async {
+    _playLoveAnimation();
+    if (widget.drop.id != null) {
+      await _dropService.toggleLoveReaction(widget.drop.id!, widget.drop);
+    }
+  }
+
+  Future<void> _handleAshLoveTap() async {
+    _playAshLoveAnimation();
+    if (widget.drop.id != null) {
+      await _dropService.toggleAshLoveReaction(widget.drop.id!, widget.drop);
+    }
+  }
+
+  Future<void> _handleDelete() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Drop'),
+        content: const Text('Are you sure you want to delete this drop?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && widget.drop.id != null) {
+      final result = await _dropService.deleteDrop(widget.drop.id!);
+      if (result == 'success') {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Drop deleted successfully!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to delete: $result'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  void _handleEdit() {
+    if (widget.onEdit != null) {
+      widget.onEdit!(widget.drop);
+    }
+  }
+
+  void _handleReport() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('The drop has been reported.'),
+        backgroundColor: Colors.orange,
+      ),
+    );
+  }
+
+  void _handleBlock() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('The user has been blocked.'),
+        backgroundColor: Colors.orange,
+      ),
+    );
+  }
+
+  void _navigateToUserProfile() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ProfilePage(
+          viewUserId: widget.drop.userId,
+          viewUserName: widget.drop.userName,
+          viewUserIconUrl: widget.drop.userIconUrl,
+        ),
+      ),
+    );
   }
 
   @override
@@ -82,28 +202,45 @@ class _DropCardState extends State<DropCard> with TickerProviderStateMixin { // 
         children: [
           Row(
             children: [
-              CircleAvatar(
-                radius: 30,
-                backgroundImage: NetworkImage(widget.drop.userIconUrl), // Use widget.drop
+              InkWell(
+                onTap: _navigateToUserProfile,
+                child: ProfileAvatar(
+                  imageUrl: widget.drop.userIconUrl.isNotEmpty
+                      ? widget.drop.userIconUrl
+                      : null,
+                  radius: 30,
+                ),
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      widget.drop.userName, // Use widget.drop
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
+                    InkWell(
+                      onTap: _navigateToUserProfile,
+                      child: Text(
+                        widget.drop.userName,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
                       ),
                     ),
                     PopupMenuButton<String>(
                       onSelected: (value) {
-                        print('Selected: $value for ${widget.drop.userName}'); // Use widget.drop
+                        if (value == 'edit') {
+                          _handleEdit();
+                        } else if (value == 'delete') {
+                          _handleDelete();
+                        } else if (value == 'report') {
+                          _handleReport();
+                        } else if (value == 'block') {
+                          _handleBlock();
+                        }
                       },
-                      itemBuilder: (BuildContext context) =>
-                          <PopupMenuEntry<String>>[
+                      itemBuilder: (BuildContext context) {
+                        if (_isOwner) {
+                          return <PopupMenuEntry<String>>[
                             const PopupMenuItem<String>(
                               value: 'edit',
                               child: Text('Edit'),
@@ -112,6 +249,9 @@ class _DropCardState extends State<DropCard> with TickerProviderStateMixin { // 
                               value: 'delete',
                               child: Text('Delete'),
                             ),
+                          ];
+                        } else {
+                          return <PopupMenuEntry<String>>[
                             const PopupMenuItem<String>(
                               value: 'report',
                               child: Text('Report'),
@@ -120,7 +260,9 @@ class _DropCardState extends State<DropCard> with TickerProviderStateMixin { // 
                               value: 'block',
                               child: Text('Block'),
                             ),
-                          ],
+                          ];
+                        }
+                      },
                     ),
                   ],
                 ),
@@ -135,13 +277,8 @@ class _DropCardState extends State<DropCard> with TickerProviderStateMixin { // 
           Row(
             children: [
               InkWell(
-                onTap: () {
-                  _playLoveAnimation();
-                  print(
-                    'Red heart tapped for ${widget.drop.userName}. Current count: ${widget.drop.loveCount}',
-                  );
-                },
-                child: AnimatedBuilder( // Wrap with AnimatedBuilder
+                onTap: _handleLoveTap,
+                child: AnimatedBuilder(
                   animation: _loveAnimation,
                   builder: (context, child) {
                     return Transform.scale(
@@ -152,22 +289,37 @@ class _DropCardState extends State<DropCard> with TickerProviderStateMixin { // 
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text('❤️'),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: _userReaction == 'love'
+                            ? BoxDecoration(
+                                border: Border.all(color: Colors.red, width: 2),
+                                borderRadius: BorderRadius.circular(4),
+                              )
+                            : null,
+                        child: const Text('❤️'),
+                      ),
                       const SizedBox(width: 4),
-                      Text('${widget.drop.loveCount}'), // Use widget.drop
+                      Text(
+                        '${widget.drop.loveCount}',
+                        style: _userReaction == 'love'
+                            ? const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.red,
+                              )
+                            : null,
+                      ),
                     ],
                   ),
                 ),
               ),
               const SizedBox(width: 16),
               InkWell(
-                onTap: () {
-                  _playAshLoveAnimation();
-                  print(
-                    'Ash heart tapped for ${widget.drop.userName}. Current count: ${widget.drop.ashLoveCount}',
-                  );
-                },
-                child: AnimatedBuilder( // Wrap with AnimatedBuilder
+                onTap: _handleAshLoveTap,
+                child: AnimatedBuilder(
                   animation: _ashLoveAnimation,
                   builder: (context, child) {
                     return Transform.scale(
@@ -178,9 +330,29 @@ class _DropCardState extends State<DropCard> with TickerProviderStateMixin { // 
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text('🩶'),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: _userReaction == 'ash'
+                            ? BoxDecoration(
+                                border: Border.all(color: Colors.grey, width: 2),
+                                borderRadius: BorderRadius.circular(4),
+                              )
+                            : null,
+                        child: const Text('🩶'),
+                      ),
                       const SizedBox(width: 4),
-                      Text('${widget.drop.ashLoveCount}'), // Use widget.drop
+                      Text(
+                        '${widget.drop.ashLoveCount}',
+                        style: _userReaction == 'ash'
+                            ? const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey,
+                              )
+                            : null,
+                      ),
                     ],
                   ),
                 ),

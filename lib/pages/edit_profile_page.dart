@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:daily_drop/auth/auth_service.dart';
+import 'package:daily_drop/widgets/profile_avatar.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:daily_drop/includes/constants.dart';
 import 'package:crypto/crypto.dart';
@@ -133,13 +134,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
   @override
   Widget build(BuildContext context) {
-    ImageProvider profileImage;
-    if (_currentUser?.email != null) {
-      profileImage = NetworkImage(_generateGravatarUrl(_currentUser!.email!));
-    } else {
-      profileImage = const AssetImage('assets/images/user_icon.png');
-    }
-
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -153,7 +147,12 @@ class _EditProfilePageState extends State<EditProfilePage> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            CircleAvatar(radius: 60, backgroundImage: profileImage),
+            ProfileAvatar(
+              imageUrl: _currentUser?.email != null
+                  ? _generateGravatarUrl(_currentUser!.email!)
+                  : null,
+              radius: 60,
+            ),
             const SizedBox(height: 10),
             Text(
               'Profile photo is loading from Gravatar.',

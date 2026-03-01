@@ -5,6 +5,7 @@ import 'package:daily_drop/pages/edit_profile_page.dart';
 import 'package:daily_drop/pages/update_email.dart';
 import 'package:daily_drop/pages/update_password.dart';
 import 'package:daily_drop/widgets/post_box.dart';
+import 'package:daily_drop/widgets/profile_avatar.dart';
 import 'package:flutter/material.dart';
 import '../models/drop.dart';
 import '../widgets/drop_card.dart';
@@ -13,9 +14,19 @@ import 'package:daily_drop/auth/auth_service.dart';
 import 'package:crypto/crypto.dart';
 import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../services/drop_service.dart';
 
 class ProfilePage extends StatefulWidget {
-  const ProfilePage({super.key});
+  final String? viewUserId;
+  final String? viewUserName;
+  final String? viewUserIconUrl;
+
+  const ProfilePage({
+    super.key,
+    this.viewUserId,
+    this.viewUserName,
+    this.viewUserIconUrl,
+  });
 
   @override
   State<ProfilePage> createState() => _ProfilePageState();
@@ -23,15 +34,63 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final DropService _dropService = DropService();
   User? _currentUser;
   String? _userGender;
   DateTime? _userDateOfBirth;
+  Drop? _editDrop;
+  Map<String, dynamic>? _viewUserData;
+  int _viewUserDropCount = 0;
+
+  // Check if viewing another user's profile
+  bool get _isViewingOtherUser => widget.viewUserId != null;
+  String get _displayUserId => widget.viewUserId ?? _currentUser!.uid;
+  String get _displayUserName =>
+      widget.viewUserName ?? _currentUser?.displayName ?? "User Name";
+  String get _displayUserIconUrl =>
+      widget.viewUserIconUrl ?? _currentUser?.photoURL ?? '';
 
   @override
   void initState() {
     super.initState();
     _currentUser = _auth.currentUser;
-    _loadUserData();
+    if (!_isViewingOtherUser) {
+      _loadUserData();
+    } else {
+      _loadViewUserData();
+    }
+  }
+
+  Future<void> _loadViewUserData() async {
+    final doc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(_displayUserId)
+        .get();
+    if (doc.exists) {
+      setState(() {
+        _viewUserData = doc.data();
+      });
+    }
+
+    final dropsSnapshot = await FirebaseFirestore.instance
+        .collection('drops')
+        .where('userId', isEqualTo: _displayUserId)
+        .get();
+    setState(() {
+      _viewUserDropCount = dropsSnapshot.docs.length;
+    });
+  }
+
+  void _handleEdit(Drop drop) {
+    setState(() {
+      _editDrop = drop;
+    });
+  }
+
+  void _handleCancelEdit() {
+    setState(() {
+      _editDrop = null;
+    });
   }
 
   Future<void> _loadUserData() async {
@@ -51,50 +110,6 @@ class _ProfilePageState extends State<ProfilePage> {
     final emailHash = md5.convert(utf8.encode(normalizedEmail)).toString();
     return 'https://www.gravatar.com/avatar/$emailHash?s=200&d=identicon';
   }
-
-  final List<Drop> _sampleDrops = [
-    Drop(
-      userName: 'John Doe',
-      userIconUrl:
-          'https://via.placeholder.com/80/0000FF/FFFFFF?text=JD', // Example image
-      dropText:
-          'Had a great productive morning working on my side project! #coding #flutter',
-      loveCount: 32,
-      ashLoveCount: 5,
-    ),
-    Drop(
-      userName: 'Jane Smith',
-      userIconUrl: 'https://via.placeholder.com/80/FF0000/FFFFFF?text=JS',
-      dropText:
-          'Enjoyed a relaxing evening with a good book. Sometimes you just need to unwind.',
-      loveCount: 18,
-      ashLoveCount: 2,
-    ),
-    Drop(
-      userName: 'Peter Jones',
-      userIconUrl: 'https://via.placeholder.com/80/00FF00/FFFFFF?text=PJ',
-      dropText:
-          'Finally finished that difficult task at work. Feeling accomplished!',
-      loveCount: 45,
-      ashLoveCount: 10,
-    ),
-    Drop(
-      userName: 'Alice Brown',
-      userIconUrl: 'https://via.placeholder.com/80/FFFF00/000000?text=AB',
-      dropText:
-          'Discovered a new cafe with amazing coffee! Highly recommend it.',
-      loveCount: 21,
-      ashLoveCount: 3,
-    ),
-    Drop(
-      userName: 'Bob White',
-      userIconUrl: 'https://via.placeholder.com/80/FFA500/FFFFFF?text=BW',
-      dropText:
-          'Went for a long walk and cleared my head. Nature always helps.',
-      loveCount: 28,
-      ashLoveCount: 7,
-    ),
-  ];
 
   @override
   Widget build(BuildContext context) {
@@ -127,11 +142,11 @@ class _ProfilePageState extends State<ProfilePage> {
             UserAccountsDrawerHeader(
               accountName: Text(_currentUser?.displayName ?? "User Name"),
               accountEmail: Text(_currentUser?.email ?? "user@example.com"),
-              currentAccountPicture: CircleAvatar(
-                backgroundImage: _currentUser?.email != null
-                    ? NetworkImage(_generateGravatarUrl(_currentUser!.email!))
-                    : const AssetImage('assets/images/user_icon.png')
-                          as ImageProvider,
+              currentAccountPicture: ProfileAvatar(
+                imageUrl: _currentUser?.email != null
+                    ? _generateGravatarUrl(_currentUser!.email!)
+                    : null,
+                radius: 40,
               ),
               decoration: BoxDecoration(color: Colors.blue.shade900),
             ),
@@ -238,19 +253,22 @@ class _ProfilePageState extends State<ProfilePage> {
               crossAxisAlignment: CrossAxisAlignment.center,
               mainAxisAlignment: MainAxisAlignment.start,
               children: [
-                CircleAvatar(
+                ProfileAvatar(
+                  imageUrl: _isViewingOtherUser
+                      ? (_displayUserIconUrl.isNotEmpty
+                            ? _displayUserIconUrl
+                            : null)
+                      : (_currentUser?.email != null
+                            ? _generateGravatarUrl(_currentUser!.email!)
+                            : null),
                   radius: 40,
-                  backgroundImage: _currentUser?.email != null
-                      ? NetworkImage(_generateGravatarUrl(_currentUser!.email!))
-                      : const AssetImage('assets/images/user_icon.png')
-                            as ImageProvider, // Default user icon
                 ),
                 const SizedBox(width: 16),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      _currentUser?.displayName ?? "User Name",
+                      _displayUserName,
                       style: const TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
@@ -308,24 +326,65 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
 
           Expanded(
-            child: ListView.builder(
-              itemCount: _sampleDrops.length + 1,
-              itemBuilder: (context, index) {
-                if (index == 0) {
-                  return const Padding(
-                    padding: EdgeInsets.symmetric(
+            child: Column(
+              children: [
+                // Only show PostBox for own profile
+                if (!_isViewingOtherUser)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
                       horizontal: 16.0,
                       vertical: 16.0,
                     ),
-                    child: PostBox(),
-                  );
-                }
-                final drop = _sampleDrops[index - 1];
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: DropCard(drop: drop),
-                );
-              },
+                    child: PostBox(
+                      editDrop: _editDrop,
+                      onUpdate: (drop) {},
+                      onCancelEdit: _handleCancelEdit,
+                    ),
+                  ),
+                Expanded(
+                  child: StreamBuilder<List<Drop>>(
+                    stream: _dropService.getUserDrops(_displayUserId),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+
+                      if (snapshot.hasError) {
+                        return Center(child: Text('Error: ${snapshot.error}'));
+                      }
+
+                      final drops = snapshot.data ?? [];
+
+                      if (drops.isEmpty) {
+                        return Center(
+                          child: Text(
+                            _isViewingOtherUser
+                                ? "No drops yet."
+                                : "You haven't posted any drops yet.",
+                            style: const TextStyle(
+                              fontSize: 16,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        );
+                      }
+
+                      return ListView.builder(
+                        itemCount: drops.length,
+                        itemBuilder: (context, index) {
+                          final drop = drops[index];
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16.0,
+                            ),
+                            child: DropCard(drop: drop, onEdit: _handleEdit),
+                          );
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ],
             ),
           ),
         ],
