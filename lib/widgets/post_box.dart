@@ -29,6 +29,22 @@ class _PostBoxState extends State<PostBox> {
   }
 
   @override
+  void didUpdateWidget(PostBox oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.editDrop != null && oldWidget.editDrop != widget.editDrop) {
+      setState(() {
+        _isEditMode = true;
+        _textController.text = widget.editDrop!.dropText;
+      });
+    } else if (widget.editDrop == null && oldWidget.editDrop != null) {
+      setState(() {
+        _isEditMode = false;
+        _textController.clear();
+      });
+    }
+  }
+
+  @override
   void dispose() {
     _textController.dispose();
     super.dispose();

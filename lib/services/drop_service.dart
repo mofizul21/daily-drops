@@ -18,6 +18,19 @@ class DropService {
     return 'https://www.gravatar.com/avatar/$emailHash?s=200&d=identicon';
   }
 
+  // Get user data from Firestore
+  Future<Map<String, dynamic>?> getUserData(String userId) async {
+    try {
+      final doc = await _firestore.collection('users').doc(userId).get();
+      if (doc.exists) {
+        return doc.data();
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
   // Save a new drop to Firestore
   Future<String> saveDrop(String dropText) async {
     try {
@@ -72,11 +85,32 @@ class DropService {
     });
   }
 
+  // Get user's reaction for a drop
+  Future<String?> getUserReaction(String dropId) async {
+    if (currentUser == null) return null;
+    
+    try {
+      final doc = await _firestore
+          .collection('drops')
+          .doc(dropId)
+          .get();
+      
+      if (doc.exists) {
+        final data = doc.data();
+        final reactions = data?['reactions'] as Map<String, dynamic>?;
+        if (reactions != null) {
+          return reactions[currentUser!.uid] as String?;
+        }
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
   // Toggle love reaction (Facebook-style)
   Future<void> toggleLoveReaction(String dropId, Drop drop) async {
-    if (currentUser == null) {
-      return;
-    }
+    if (currentUser == null) return;
     
     final currentUserId = currentUser!.uid;
     final userReaction = drop.reactions[currentUserId] ?? 'none';
@@ -86,16 +120,12 @@ class DropService {
     if (userReaction == 'love') {
       // Remove love reaction
       updates['reactions.$currentUserId'] = FieldValue.delete();
-      updates['loveCount'] = FieldValue.increment(-1);
     } else if (userReaction == 'ash') {
       // Switch from ash to love
       updates['reactions.$currentUserId'] = 'love';
-      updates['ashLoveCount'] = FieldValue.increment(-1);
-      updates['loveCount'] = FieldValue.increment(1);
     } else {
       // Add new love reaction
       updates['reactions.$currentUserId'] = 'love';
-      updates['loveCount'] = FieldValue.increment(1);
     }
 
     await _firestore.collection('drops').doc(dropId).update(updates);
@@ -103,9 +133,7 @@ class DropService {
 
   // Toggle ash love reaction (Facebook-style)
   Future<void> toggleAshLoveReaction(String dropId, Drop drop) async {
-    if (currentUser == null) {
-      return;
-    }
+    if (currentUser == null) return;
     
     final currentUserId = currentUser!.uid;
     final userReaction = drop.reactions[currentUserId] ?? 'none';
@@ -115,16 +143,12 @@ class DropService {
     if (userReaction == 'ash') {
       // Remove ash love reaction
       updates['reactions.$currentUserId'] = FieldValue.delete();
-      updates['ashLoveCount'] = FieldValue.increment(-1);
     } else if (userReaction == 'love') {
       // Switch from love to ash
       updates['reactions.$currentUserId'] = 'ash';
-      updates['loveCount'] = FieldValue.increment(-1);
-      updates['ashLoveCount'] = FieldValue.increment(1);
     } else {
       // Add new ash love reaction
       updates['reactions.$currentUserId'] = 'ash';
-      updates['ashLoveCount'] = FieldValue.increment(1);
     }
 
     await _firestore.collection('drops').doc(dropId).update(updates);

@@ -328,8 +328,8 @@ class _ProfilePageState extends State<ProfilePage> {
           Expanded(
             child: Column(
               children: [
-                // Only show PostBox for own profile
-                if (!_isViewingOtherUser)
+                // Show PostBox for own profile or when editing
+                if (!_isViewingOtherUser || _editDrop != null)
                   Padding(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 16.0,

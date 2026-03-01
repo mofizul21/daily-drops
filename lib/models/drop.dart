@@ -4,8 +4,6 @@ class Drop {
   final String userName;
   final String userIconUrl;
   final String dropText;
-  int loveCount;
-  int ashLoveCount;
   final String userId;
   final String? id;
   final Timestamp timestamp;
@@ -15,8 +13,6 @@ class Drop {
     required this.userName,
     required this.userIconUrl,
     required this.dropText,
-    this.loveCount = 0,
-    this.ashLoveCount = 0,
     required this.userId,
     this.id,
     required this.timestamp,
@@ -28,8 +24,6 @@ class Drop {
       'userName': userName,
       'userIconUrl': userIconUrl,
       'dropText': dropText,
-      'loveCount': loveCount,
-      'ashLoveCount': ashLoveCount,
       'userId': userId,
       'timestamp': timestamp,
       'reactions': reactions,
@@ -45,8 +39,6 @@ class Drop {
       userName: data['userName'] ?? '',
       userIconUrl: data['userIconUrl'] ?? '',
       dropText: data['dropText'] ?? '',
-      loveCount: data['loveCount'] ?? 0,
-      ashLoveCount: data['ashLoveCount'] ?? 0,
       userId: data['userId'] ?? '',
       id: documentId,
       timestamp: data['timestamp'] ?? Timestamp.now(),

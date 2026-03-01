@@ -34,6 +34,16 @@ class _DropCardState extends State<DropCard> with TickerProviderStateMixin {
     return null;
   }
 
+  // Calculate love count from reactions
+  int get _loveCount {
+    return widget.drop.reactions.values.where((r) => r == 'love').length;
+  }
+
+  // Calculate ash love count from reactions
+  int get _ashLoveCount {
+    return widget.drop.reactions.values.where((r) => r == 'ash').length;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -304,7 +314,7 @@ class _DropCardState extends State<DropCard> with TickerProviderStateMixin {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        '${widget.drop.loveCount}',
+                        '$_loveCount',
                         style: _userReaction == 'love'
                             ? const TextStyle(
                                 fontWeight: FontWeight.bold,
@@ -345,7 +355,7 @@ class _DropCardState extends State<DropCard> with TickerProviderStateMixin {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        '${widget.drop.ashLoveCount}',
+                        '$_ashLoveCount',
                         style: _userReaction == 'ash'
                             ? const TextStyle(
                                 fontWeight: FontWeight.bold,
