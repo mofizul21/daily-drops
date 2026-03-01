@@ -1,15 +1,57 @@
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 
 class StreakNotificationService {
+  final FirebaseMessaging _messaging = FirebaseMessaging.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  // Initialize notifications (placeholder for future FCM)
+  // Debug print helper
+  void _debugLog(String message) {
+    if (kDebugMode) {
+      print(message);
+    }
+  }
+
+  // Initialize notifications
   Future<void> initializeNotifications() async {
-    // For now, just save FCM token placeholder
-    // In production, you'd initialize Firebase Messaging here
-    print('Streak notifications initialized (FCM not configured)');
+    try {
+      // Request permission
+      await _messaging.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+        provisional: false,
+      );
+
+      // Get FCM token
+      final token = await _messaging.getToken();
+      if (token != null && _auth.currentUser != null) {
+        await _saveFCMToken(token);
+      }
+
+      // Listen for token refresh
+      _messaging.onTokenRefresh.listen(_saveFCMToken);
+
+      _debugLog('Streak notifications initialized with FCM');
+    } catch (e) {
+      _debugLog('FCM initialization error: $e');
+      // Continue without FCM - app still works
+    }
+  }
+
+  // Save FCM token to Firestore
+  Future<void> _saveFCMToken(String token) async {
+    if (_auth.currentUser == null) return;
+    
+    await _firestore.collection('users').doc(_auth.currentUser!.uid).set({
+      'fcmToken': token,
+      'fcmTokenUpdatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+    
+    _debugLog('FCM token saved to Firestore');
   }
 
   // Check if user is at risk of losing streak (call this on app open)
@@ -47,12 +89,5 @@ class StreakNotificationService {
       'atRisk': atRisk,
       'daysSinceLastPost': daysSinceLastPost,
     };
-  }
-
-  // Show in-app notification (placeholder for future push notifications)
-  Future<void> showStreakWarning() async {
-    // For now, just log it
-    // In production, you'd use flutter_local_notifications here
-    print('Streak warning: User is at risk of losing their streak!');
   }
 }
