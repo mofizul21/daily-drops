@@ -101,8 +101,19 @@ class _ProfilePageState extends State<ProfilePage> {
         if (userData['dateOfBirth'] != null) {
           _userDateOfBirth = (userData['dateOfBirth'] as Timestamp).toDate();
         }
+        _viewUserData = userData;
       });
     }
+    
+    // Load streak
+    final streak = await _dropService.getUserStreak(_currentUser!.uid);
+    setState(() {
+      if (_viewUserData == null) {
+        _viewUserData = {'streak': streak};
+      } else {
+        _viewUserData!['streak'] = streak;
+      }
+    });
   }
 
   String _generateGravatarUrl(String email) {
@@ -312,9 +323,9 @@ class _ProfilePageState extends State<ProfilePage> {
                               bottomRight: Radius.circular(10),
                             ),
                           ),
-                          child: const Text(
-                            '4 days',
-                            style: TextStyle(color: Colors.black, fontSize: 16),
+                          child: Text(
+                            '${_viewUserData?['streak'] ?? 0} days',
+                            style: const TextStyle(color: Colors.black, fontSize: 16),
                           ),
                         ),
                       ],

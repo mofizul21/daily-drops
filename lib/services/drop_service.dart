@@ -44,19 +44,119 @@ class DropService {
         userIconUrl = _generateGravatarUrl(currentUser!.email!);
       }
 
+      final now = Timestamp.now();
+      final today = DateTime.now();
+      final todayStart = DateTime(today.year, today.month, today.day);
+
+      // Check user's last post date from their profile
+      final userDoc = await _firestore.collection('users').doc(currentUser!.uid).get();
+      final userData = userDoc.data();
+      
+      if (userData != null && userData['lastPostDate'] != null) {
+        final lastPostDate = (userData['lastPostDate'] as Timestamp).toDate();
+        final lastPostDay = DateTime(lastPostDate.year, lastPostDate.month, lastPostDate.day);
+        
+        // If last post was today, prevent duplicate
+        if (lastPostDay.year == todayStart.year && 
+            lastPostDay.month == todayStart.month && 
+            lastPostDay.day == todayStart.day) {
+          return 'You already posted a drop today!';
+        }
+      }
+
       final drop = Drop(
         userName: currentUser!.displayName ?? 'Anonymous',
         userIconUrl: userIconUrl,
         dropText: dropText,
         userId: currentUser!.uid,
-        timestamp: Timestamp.now(),
+        timestamp: now,
       );
 
       await _firestore.collection('drops').add(drop.toMap());
+      
+      // Update user's streak
+      await _updateUserStreak();
+      
       return 'success';
     } catch (e) {
       return e.toString();
     }
+  }
+
+  // Update user's streak
+  Future<void> _updateUserStreak() async {
+    if (currentUser == null) return;
+
+    final userDoc = await _firestore.collection('users').doc(currentUser!.uid).get();
+    final userData = userDoc.data();
+    
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    
+    int currentStreak = 0;
+    DateTime? lastPostDate;
+    
+    if (userData != null && userData['lastPostDate'] != null) {
+      lastPostDate = (userData['lastPostDate'] as Timestamp).toDate();
+      lastPostDate = DateTime(lastPostDate.year, lastPostDate.month, lastPostDate.day);
+      
+      final daysDiff = today.difference(lastPostDate).inDays;
+      
+      if (daysDiff == 0) {
+        // Already posted today, keep streak
+        currentStreak = userData['streak'] ?? 0;
+      } else if (daysDiff == 1) {
+        // Posted yesterday, increment streak
+        currentStreak = (userData['streak'] ?? 0) + 1;
+      } else if (daysDiff > 1) {
+        // Missed a day, reset streak
+        currentStreak = 1;
+      }
+    } else {
+      // First post ever
+      currentStreak = 1;
+    }
+
+    // Update user document
+    await _firestore.collection('users').doc(currentUser!.uid).set({
+      'streak': currentStreak,
+      'lastPostDate': Timestamp.fromDate(today),
+      'streakUpdatedAt': Timestamp.now(),
+    }, SetOptions(merge: true));
+  }
+
+  // Check and reset broken streaks (call this when user opens app)
+  Future<void> checkAndResetStreaks() async {
+    if (currentUser == null) return;
+
+    final userDoc = await _firestore.collection('users').doc(currentUser!.uid).get();
+    final userData = userDoc.data();
+    
+    if (userData == null || userData['lastPostDate'] == null) return;
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final lastPostDate = (userData['lastPostDate'] as Timestamp).toDate();
+    final lastPostDay = DateTime(lastPostDate.year, lastPostDate.month, lastPostDate.day);
+
+    final daysDiff = today.difference(lastPostDay).inDays;
+
+    // If last post was before yesterday, reset streak
+    if (daysDiff > 1 && (userData['streak'] ?? 0) > 0) {
+      await _firestore.collection('users').doc(currentUser!.uid).update({
+        'streak': 0,
+        'streakResetAt': Timestamp.now(),
+      });
+    }
+  }
+
+  // Get user's current streak
+  Future<int> getUserStreak(String userId) async {
+    // First check and reset if needed
+    await checkAndResetStreaks();
+    
+    final userDoc = await _firestore.collection('users').doc(userId).get();
+    return userDoc.data()?['streak'] ?? 0;
   }
 
   // Get all drops ordered by timestamp (newest first)
