@@ -1,4 +1,4 @@
-# Daily Drops
+# Daily Drop
 A social media app for trendy young people.
 
 ## Screenshots
