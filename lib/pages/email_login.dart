@@ -1,6 +1,4 @@
 import 'package:daily_drop/pages/login_page.dart';
-import 'package:daily_drop/pages/home_page.dart';
-import 'package:daily_drop/widget_tree.dart';
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 import 'package:daily_drop/includes/constants.dart';
@@ -122,14 +120,12 @@ class _EmailLoginPageState extends State<EmailLoginPage>
         // Set the correct page index for HomePage
         selectedPageNotifier.value = 1;
 
-        // Wait for snackbar to show, then navigate to WidgetTree (which shows HomePage with bottom nav)
+        // Wait for snackbar to show, then pop all routes
+        // AuthWrapper will handle navigation via auth state changes
         await Future.delayed(const Duration(milliseconds: 500));
         if (mounted) {
-          // Replace entire stack with WidgetTree
-          Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (context) => const WidgetTree()),
-            (route) => false,
-          );
+          // Pop all routes back to AuthWrapper
+          Navigator.of(context).popUntil((route) => route.isFirst);
         }
       } else {
         _showSnackBar('Login failed: $signInResult', isError: true);

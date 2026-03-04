@@ -97,10 +97,9 @@ class AuthService {
       }
 
       // Get access token from authorization client
-      String? accessToken;
       final authClient = googleUser.authorizationClient;
       final authorization = await authClient.authorizeScopes(['email', 'profile']);
-      accessToken = authorization.accessToken;
+      final String? accessToken = authorization.accessToken;
 
       // Create a credential for Firebase
       final AuthCredential credential = GoogleAuthProvider.credential(

@@ -36,11 +36,8 @@ class _ProfilePageState extends State<ProfilePage> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final DropService _dropService = DropService();
   User? _currentUser;
-  String? _userGender;
-  DateTime? _userDateOfBirth;
   Drop? _editDrop;
   Map<String, dynamic>? _viewUserData;
-  int _viewUserDropCount = 0;
 
   // Check if viewing another user's profile
   bool get _isViewingOtherUser => widget.viewUserId != null;
@@ -71,14 +68,6 @@ class _ProfilePageState extends State<ProfilePage> {
         _viewUserData = doc.data();
       });
     }
-
-    final dropsSnapshot = await FirebaseFirestore.instance
-        .collection('drops')
-        .where('userId', isEqualTo: _displayUserId)
-        .get();
-    setState(() {
-      _viewUserDropCount = dropsSnapshot.docs.length;
-    });
   }
 
   void _handleEdit(Drop drop) {
@@ -97,14 +86,10 @@ class _ProfilePageState extends State<ProfilePage> {
     final userData = await authService.value.getUserData();
     if (userData != null) {
       setState(() {
-        _userGender = userData['gender'];
-        if (userData['dateOfBirth'] != null) {
-          _userDateOfBirth = (userData['dateOfBirth'] as Timestamp).toDate();
-        }
         _viewUserData = userData;
       });
     }
-    
+
     // Load streak
     final streak = await _dropService.getUserStreak(_currentUser!.uid);
     setState(() {

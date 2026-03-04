@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 import 'package:daily_drop/includes/constants.dart';
-import 'package:daily_drop/auth/auth_service.dart';
 import 'package:daily_drop/pages/email_login.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -20,7 +19,6 @@ class _EmailRegisterPageState extends State<EmailRegisterPage> with WidgetsBindi
   final TextEditingController _confirmPasswordController =
       TextEditingController();
 
-  final AuthService _authService = authService.value;
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;

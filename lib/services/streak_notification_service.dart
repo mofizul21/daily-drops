@@ -11,7 +11,7 @@ class StreakNotificationService {
   // Debug print helper
   void _debugLog(String message) {
     if (kDebugMode) {
-      print(message);
+      print('🔔 StreakNotification: $message');
     }
   }
 
@@ -19,21 +19,30 @@ class StreakNotificationService {
   Future<void> initializeNotifications() async {
     try {
       // Request permission
-      await _messaging.requestPermission(
+      final settings = await _messaging.requestPermission(
         alert: true,
         badge: true,
         sound: true,
         provisional: false,
       );
 
+      _debugLog('Permission status: ${settings.authorizationStatus}');
+
       // Get FCM token
       final token = await _messaging.getToken();
+      _debugLog('FCM Token: ${token ?? "null"}');
+      
       if (token != null && _auth.currentUser != null) {
         await _saveFCMToken(token);
       }
 
       // Listen for token refresh
       _messaging.onTokenRefresh.listen(_saveFCMToken);
+
+      // Listen for foreground messages
+      FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+        _debugLog('Foreground message received: ${message.notification?.title}');
+      });
 
       _debugLog('Streak notifications initialized with FCM');
     } catch (e) {
@@ -44,14 +53,22 @@ class StreakNotificationService {
 
   // Save FCM token to Firestore
   Future<void> _saveFCMToken(String token) async {
-    if (_auth.currentUser == null) return;
-    
-    await _firestore.collection('users').doc(_auth.currentUser!.uid).set({
-      'fcmToken': token,
-      'fcmTokenUpdatedAt': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
-    
-    _debugLog('FCM token saved to Firestore');
+    if (_auth.currentUser == null) {
+      _debugLog('No user logged in, skipping FCM token save');
+      return;
+    }
+
+    try {
+      await _firestore.collection('users').doc(_auth.currentUser!.uid).set({
+        'fcmToken': token,
+        'fcmTokenUpdatedAt': FieldValue.serverTimestamp(),
+        'platform': 'android', // or 'ios'
+      }, SetOptions(merge: true));
+
+      _debugLog('FCM token saved to Firestore for user: ${_auth.currentUser!.uid}');
+    } catch (e) {
+      _debugLog('Error saving FCM token: $e');
+    }
   }
 
   // Check if user is at risk of losing streak (call this on app open)
@@ -64,7 +81,7 @@ class StreakNotificationService {
         .collection('users')
         .doc(_auth.currentUser!.uid)
         .get();
-    
+
     final userData = userDoc.data();
     final streak = userData?['streak'] ?? 0;
     final lastPostDate = userData?['lastPostDate'] as Timestamp?;

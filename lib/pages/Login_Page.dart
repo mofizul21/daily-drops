@@ -1,9 +1,8 @@
-import 'package:daily_drop/pages/home_page.dart';
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 import 'package:daily_drop/includes/constants.dart';
 import 'package:daily_drop/pages/email_login.dart';
-import 'package:daily_drop/auth/auth_service.dart'; // Import AuthService
+import 'package:daily_drop/auth/auth_service.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -13,6 +12,8 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
+  bool _isSigningIn = false;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -52,40 +53,60 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   const SizedBox(height: 24),
                   ElevatedButton(
-                    onPressed: () async {
-                      final String result = await authService.value
-                          .signInWithGoogle();
-                      if (result == 'success') {
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const HomePage(),
-                          ),
-                        );
-                      } else {
-                        String userFriendlyMessage = result;
-                        if (result == 'Google Sign-In aborted by user.') {
-                          userFriendlyMessage =
-                              'Google Sign-In cancelled. Please try again.';
-                        }
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(userFriendlyMessage)),
-                        );
-                      }
-                    },
+                    onPressed: _isSigningIn
+                        ? null
+                        : () async {
+                            setState(() {
+                              _isSigningIn = true;
+                            });
+
+                            final String result = await authService.value
+                                .signInWithGoogle();
+
+                            if (!mounted) return;
+
+                            setState(() {
+                              _isSigningIn = false;
+                            });
+
+                            if (result == 'success') {
+                              // AuthWrapper will handle navigation via auth state changes
+                              // No need to manually navigate
+                            } else {
+                              String userFriendlyMessage = result;
+                              if (result == 'Google Sign-In aborted by user.') {
+                                userFriendlyMessage =
+                                    'Google Sign-In cancelled. Please try again.';
+                              }
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text(userFriendlyMessage)),
+                              );
+                            }
+                          },
                     style: CommonStyles.primaryButtonStyle,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.g_mobiledata_outlined,
-                          color: Colors.black,
-                          size: 35.0,
-                        ),
-                        const SizedBox(width: 8),
-                        Text('Login with Google'),
-                      ],
-                    ),
+                    child: _isSigningIn
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.black,
+                              ),
+                            ),
+                          )
+                        : Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.g_mobiledata_outlined,
+                                color: Colors.black,
+                                size: 35.0,
+                              ),
+                              const SizedBox(width: 8),
+                              Text('Login with Google'),
+                            ],
+                          ),
                   ),
                   ElevatedButton(
                     onPressed: () {
