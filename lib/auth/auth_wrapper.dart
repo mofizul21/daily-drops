@@ -18,10 +18,7 @@ class AuthWrapper extends StatelessWidget {
 
         final User? user = snapshot.data;
 
-        // Check if user is verified
-        final bool isVerified = user?.emailVerified ?? false;
-
-        if (user != null && isVerified) {
+        if (user != null) {
           return const WidgetTree();
         }
 

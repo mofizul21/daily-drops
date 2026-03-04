@@ -13,7 +13,7 @@ class EmailRegisterPage extends StatefulWidget {
   State<EmailRegisterPage> createState() => _EmailRegisterPageState();
 }
 
-class _EmailRegisterPageState extends State<EmailRegisterPage> {
+class _EmailRegisterPageState extends State<EmailRegisterPage> with WidgetsBindingObserver {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
@@ -24,9 +24,25 @@ class _EmailRegisterPageState extends State<EmailRegisterPage> {
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
+  bool _isKeyboardVisible = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didChangeMetrics() {
+    final keyboardHeight = View.of(context).viewInsets.bottom;
+    setState(() {
+      _isKeyboardVisible = keyboardHeight > 0;
+    });
+  }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
@@ -132,7 +148,7 @@ class _EmailRegisterPageState extends State<EmailRegisterPage> {
           'Register with Email',
           style: TextStyle(color: Colors.white),
         ),
-        backgroundColor: Colors.transparent,
+        backgroundColor: _isKeyboardVisible ? Colors.deepPurple : Colors.transparent,
         elevation: 0,
         foregroundColor: Colors.white,
       ),

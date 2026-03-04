@@ -36,7 +36,7 @@ class _LoginPageState extends State<LoginPage> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    'DailyDrop',
+                    'Daily Drop',
                     style: TextStyle(fontSize: 40, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 10),
@@ -53,16 +53,20 @@ class _LoginPageState extends State<LoginPage> {
                   const SizedBox(height: 24),
                   ElevatedButton(
                     onPressed: () async {
-                      final String result = await authService.value.signInWithGoogle();
+                      final String result = await authService.value
+                          .signInWithGoogle();
                       if (result == 'success') {
                         Navigator.pushReplacement(
                           context,
-                          MaterialPageRoute(builder: (context) => const HomePage()),
+                          MaterialPageRoute(
+                            builder: (context) => const HomePage(),
+                          ),
                         );
                       } else {
                         String userFriendlyMessage = result;
                         if (result == 'Google Sign-In aborted by user.') {
-                          userFriendlyMessage = 'Google Sign-In cancelled. Please try again.';
+                          userFriendlyMessage =
+                              'Google Sign-In cancelled. Please try again.';
                         }
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(content: Text(userFriendlyMessage)),
@@ -87,7 +91,9 @@ class _LoginPageState extends State<LoginPage> {
                     onPressed: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => const EmailLoginPage()),
+                        MaterialPageRoute(
+                          builder: (context) => const EmailLoginPage(),
+                        ),
                       );
                     },
                     style: CommonStyles.primaryButtonStyle,
@@ -110,6 +116,6 @@ class _LoginPageState extends State<LoginPage> {
           ),
         ],
       ),
-      );
+    );
   }
 }

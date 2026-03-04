@@ -18,7 +18,8 @@ class EmailLoginPage extends StatefulWidget {
   State<EmailLoginPage> createState() => _EmailLoginPageState();
 }
 
-class _EmailLoginPageState extends State<EmailLoginPage> {
+class _EmailLoginPageState extends State<EmailLoginPage>
+    with WidgetsBindingObserver {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
@@ -26,10 +27,12 @@ class _EmailLoginPageState extends State<EmailLoginPage> {
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _showResendVerification = false;
+  bool _isKeyboardVisible = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     // Show verification message if coming from registration
     if (widget.verificationEmail != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -46,7 +49,16 @@ class _EmailLoginPageState extends State<EmailLoginPage> {
   }
 
   @override
+  void didChangeMetrics() {
+    final keyboardHeight = View.of(context).viewInsets.bottom;
+    setState(() {
+      _isKeyboardVisible = keyboardHeight > 0;
+    });
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -191,7 +203,9 @@ class _EmailLoginPageState extends State<EmailLoginPage> {
           'Login with Email',
           style: TextStyle(color: Colors.white),
         ),
-        backgroundColor: Colors.transparent,
+        backgroundColor: _isKeyboardVisible
+            ? Colors.deepPurple
+            : Colors.transparent,
         elevation: 0,
         foregroundColor: Colors.white,
       ),

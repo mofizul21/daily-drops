@@ -84,28 +84,31 @@ class AuthService {
 
   Future<String> signInWithGoogle() async {
     try {
-      final GoogleSignInAccount? googleUser = await _googleSignIn
-          .authenticate();
+      // Trigger the authentication flow
+      final GoogleSignInAccount googleUser = await _googleSignIn.authenticate();
 
-      if (googleUser == null) {
-        return 'Google Sign-In aborted by user.';
+      // Get the auth tokens
+      final GoogleSignInAuthentication googleAuth = googleUser.authentication;
+
+      final String? idToken = googleAuth.idToken;
+
+      if (idToken == null) {
+        return 'Failed to obtain ID token.';
       }
 
-      final GoogleSignInClientAuthorization? auth = await googleUser
-          .authorizationClient
-          ?.authorizeScopes(['email', 'profile']);
+      // Get access token from authorization client
+      String? accessToken;
+      final authClient = googleUser.authorizationClient;
+      final authorization = await authClient.authorizeScopes(['email', 'profile']);
+      accessToken = authorization.accessToken;
 
-      if (auth == null ||
-          auth.accessToken == null ||
-          googleUser.authentication.idToken == null) {
-        return 'Failed to obtain access token or ID token.';
-      }
-
+      // Create a credential for Firebase
       final AuthCredential credential = GoogleAuthProvider.credential(
-        accessToken: auth.accessToken,
-        idToken: googleUser.authentication.idToken,
+        accessToken: accessToken,
+        idToken: idToken,
       );
 
+      // Sign in to Firebase with the Google credentials
       await firebaseAuth.signInWithCredential(credential);
       return 'success';
     } on GoogleSignInException catch (e) {
